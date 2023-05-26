@@ -51,8 +51,8 @@ CREATE PROCEDURE migrar_pedido
 AS
 BEGIN
 	INSERT INTO Pedido
-	(pedido_nro, pedido_fecha, pedido_tarifa, pedido_propina, pedido_tiempo_entrega_estimada, pedido_fecha_hora_entrega, pedido_calificacion, pedido_observeciones)
-	SELECT PEDIDO_NUMERO, PEDIDO_FECHA, PEDIDO_TARIFA_SERVICIO, PEDIDO_PROPINA, PEDIDO_ENTREGA_ESTIMADA, PEDIDO_FECHA_ENTREGA, PEDIDO_CALIFICACION, PEDIDO_FECHA
+	(pedido_nro, pedido_fecha, pedido_tarifa, pedido_propina, pedido_tiempo_entrega_estimada, pedido_fecha_hora_entrega, pedido_calificacion, pedido_observeciones, pedido_estado)
+	SELECT PEDIDO_NUMERO, PEDIDO_FECHA, PEDIDO_TARIFA_SERVICIO, PEDIDO_PROPINA, PEDIDO_ENTREGA_ESTIMADA, PEDIDO_FECHA_ENTREGA, PEDIDO_CALIFICACION, PEDIDO_OBSERV, PEDIDO_ESTADO
 	FROM [GD1C2023].[gd_esquema].[Maestra]
 	WHERE (PEDIDO_NUMERO is not null and PEDIDO_FECHA is not null)
 	ORDER BY PEDIDO_NUMERO
@@ -249,8 +249,8 @@ CREATE PROCEDURE migrar_reclamo
 AS
 BEGIN
 	INSERT INTO Reclamo
-	(reclamo_id, reclamo_tipo, reclamo_descripcion, reclamo_fecha_hora_creacion, reclamo_solucion, reclamo_fecha_hora_solucion, reclamo_calificacion)
-	SELECT RECLAMO_NRO, RECLAMO_TIPO, RECLAMO_DESCRIPCION, RECLAMO_FECHA, RECLAMO_SOLUCION, RECLAMO_FECHA_SOLUCION, RECLAMO_CALIFICACION
+	(reclamo_id, reclamo_tipo, reclamo_descripcion, reclamo_fecha_hora_creacion, reclamo_estado, reclamo_solucion, reclamo_fecha_hora_solucion, reclamo_calificacion)
+	SELECT RECLAMO_NRO, RECLAMO_TIPO, RECLAMO_DESCRIPCION, RECLAMO_FECHA, RECLAMO_ESTADO, RECLAMO_SOLUCION, RECLAMO_FECHA_SOLUCION, RECLAMO_CALIFICACION
 	FROM [GD1C2023].[gd_esquema].[Maestra]
 END
 */
@@ -274,7 +274,7 @@ CREATE PROCEDURE migrar_cupon
 AS
 BEGIN
 	INSERT INTO Cupon
-	(cupon_id, cupon_tipo, cupon_monto_descuento, cupon_fecha_alta, cupon_fecha_vencimiento)
+	(cupon_nro, cupon_tipo, cupon_monto_descuento, cupon_fecha_alta, cupon_fecha_vencimiento)
 	SELECT CUPON_NRO, CUPON_TIPO. CUPON_MONTO, CUPON_FECHA_ALTA, CUPON_FECHA_VENCIMIENTO
 	FROM [GD1C2023].[gd_esquema].[Maestra]
 END
@@ -299,7 +299,7 @@ CREATE PROCEDURE migrar_cupon_reclamo
 AS
 BEGIN
 	INSERT INTO CuponReclamo
-	(cupon_reclamo_id, cupon_reclamo_tipo, cupon_reclamo_monto_descuento, cupon_reclamo_fecha_alta, cupon_reclamo_fecha_vencimiento)
+	(cupon_reclamo_nro, cupon_reclamo_tipo, cupon_reclamo_monto, cupon_reclamo_fecha_alta, cupon_reclamo_fecha_vencimiento)
 	SELECT CUPON_RECLAMO_NRO, CUPON_RECLAMO_TIPO. CUPON_RECLAMO_MONTO, CUPON_RECLAMO_FECHA_ALTA, CUPON_RECLAMO_FECHA_VENCIMIENTO
 	FROM [GD1C2023].[gd_esquema].[Maestra]
 END
@@ -396,4 +396,11 @@ CREATE TABLE Provincia(
 	provincia_id int NOT NULL PRIMARY KEY,
 	provincia_localidad int NOT NULL
 );
+*/
+
+/*
+Falta de la tabla maestra: PEDIDO_TOTAL_PRODUCTOS, ENVIO_MENSAJERIA_KM, ENVIO_MENSAJERIA_PRECIO_SEGURO, ENVIO_MENSAJERIA_TOTAL, ENVIO_MENSAJERIA_OBSERV, ENVIO_MENSAJERIA_FECHA,
+ENVIO_MENSAJERIA_FECHA_ENTREGA, ENVIO_MENSAJERIA_TIEMPO_ESTIMADO, ENVIO_MENSAJERIA_ESTADO, PEDIDO_PRECIO_ENVIO, PEDIDO_TOTAL_CUPONES, PEDIDO_TOTAL_SERVICIO,
+PEDIDO_TIEMPO_ESTIMADO_ENTREGA, LOCAL_LOCALIDAD, LOCAL_PROVINCIA, HORARIO_LOCAL_HORA_APERTURA, HORARIO_LOCAL_HORA_CIERRE, HORARIO_LOCAL_DIA, OPERADOR_RECLAMO_NOMBRE, 
+OPERADOR_RECLAMO_APELLIDO, OPERADOR_RECLAMO_DNI, OPERADOR_RECLAMO_TELEFONO, OPERADOR_RECLAMO_DIRECCION, OPERADOR_RECLAMO_MAIL, OPERADOR_RECLAMO_FECHA_NAC
 */
