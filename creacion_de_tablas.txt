@@ -366,8 +366,6 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_tarjeta
  GO
 
 
-
-
 CREATE PROCEDURE GAME_OF_JOINS.migrar_medio_pago
  AS
   BEGIN
@@ -429,8 +427,9 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_local
   BEGIN
 	INSERT INTO GAME_OF_JOINS.LocalRegistrado
 	(local_nombre, local_tipo, local_descripcion)
-	SELECT LOCAL_NOMBRE, LOCAL_TIPO, LOCAL_DESCRIPCION
+	SELECT DISTINCT LOCAL_NOMBRE, LOCAL_TIPO, LOCAL_DESCRIPCION
 	FROM [GD1C2023].[gd_esquema].[Maestra]
+	WHERE LOCAL_NOMBRE IS NOT NULL
   END
  GO
 
@@ -440,20 +439,21 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_direccion_local
   BEGIN
 	INSERT INTO GAME_OF_JOINS.DireccionLocal
 	(direccion_local_direccion, direccion_local_localidad, direccion_local_provincia)
-	SELECT LOCAL_DIRECCION, LOCAL_LOCALIDAD, LOCAL_PROVINCIA 
+	SELECT DISTINCT LOCAL_DIRECCION, LOCAL_LOCALIDAD, LOCAL_PROVINCIA 
 	FROM [GD1C2023].[gd_esquema].[Maestra]
+	WHERE LOCAL_DIRECCION IS NOT NULL
   END
  GO
-
 
 CREATE PROCEDURE GAME_OF_JOINS.migrar_atencion_local
  AS
   BEGIN
 	INSERT INTO GAME_OF_JOINS.AtencionLocal
 	(atencion_dias, atencion_horario_apertura, atencion_horario_cierre)
-	SELECT HORARIO_LOCAL_DIA, HORARIO_LOCAL_HORA_APERTURA, HORARIO_LOCAL_HORA_CIERRE
+	SELECT DISTINCT HORARIO_LOCAL_DIA, HORARIO_LOCAL_HORA_APERTURA, HORARIO_LOCAL_HORA_CIERRE
 	FROM [GD1C2023].[gd_esquema].[Maestra]
-  END
+	WHERE HORARIO_LOCAL_DIA IS NOT NULL
+  END 
  GO
 
 
@@ -479,43 +479,16 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_direccion_usuario
   END
  GO
 
-/*
-DROP PROCEDURE migrar_cupon
-DROP PROCEDURE migrar_cupon_reclamo
-DROP PROCEDURE migrar_direccion_local
-DROP PROCEDURE migrar_direccion_usuario
-DROP PROCEDURE migrar_envio
-DROP PROCEDURE migrar_local
-DROP PROCEDURE migrar_medio_pago
-DROP PROCEDURE migrar_operador_reclamo
-DROP PROCEDURE migrar_paquete
-DROP PROCEDURE migrar_pedido
-DROP PROCEDURE migrar_producto_local
-DROP PROCEDURE migrar_reclamo
-DROP PROCEDURE migrar_repartidor
-DROP PROCEDURE migrar_servicio_mensajeria
-DROP PROCEDURE migrar_tarjeta
-DROP PROCEDURE migrar_usuario
-
-DROP TABLE GAME_OF_JOINS.Repartidor
-DROP TABLE GAME_OF_JOINS.Envio
-DROP TABLE GAME_OF_JOINS.ServicioMensajeria
-DROP TABLE GAME_OF_JOINS.Pedido
-DROP TABLE GAME_OF_JOINS.Reclamo
-DROP TABLE GAME_OF_JOINS.CuponPedido
-DROP TABLE GAME_OF_JOINS.Cupon
-*/
----------------------------------------------Execs---------------------------------------------------
-EXEC migrar_cupon
-EXEC migrar_cupon_reclamo
+--EXEC migrar_cupon
+--EXEC migrar_cupon_reclamo
 EXEC migrar_direccion_local
 EXEC migrar_direccion_usuario
-EXEC migrar_envio --revisar
+--EXEC migrar_envio --revisar
 EXEC migrar_local
 EXEC migrar_medio_pago
-EXEC migrar_operador_reclamo --revisar
+--EXEC migrar_operador_reclamo --revisar
 EXEC migrar_paquete
-EXEC migrar_pedido --revisar
+--EXEC migrar_pedido --revisar
 EXEC migrar_producto_local --revisar
 EXEC migrar_reclamo
 EXEC migrar_repartidor 
