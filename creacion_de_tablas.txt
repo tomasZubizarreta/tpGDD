@@ -1,71 +1,252 @@
-USE GD1C2023
-
 --------------------------- Creacion del schema --------------------------- 
--- CREATE schema ??
+CREATE schema GAME_OF_JOINS
+go
 
+USE GD1C2023
 --------------------------- Creacion de tablas ---------------------------- 
 
-CREATE TABLE Usuario(
---	usuario_id decimal(18,0) IDENTITY PRIMARY KEY,
+CREATE PROCEDURE migrar_usuario
+AS
+BEGIN
+    SET IDENTITY_INSERT GAME_OF_JOINS.Usuario ON;
+    INSERT INTO GAME_OF_JOINS.Usuario
+    (usuario_dni, usuario_nombre, usuario_apellido, usuario_mail, usuario_telefono, usuario_fecha_registro, usuario_fecha_nacimiento)
+    SELECT DISTINCT USUARIO_DNI, USUARIO_NOMBRE, USUARIO_APELLIDO, USUARIO_MAIL, USUARIO_TELEFONO, USUARIO_FECHA_REGISTRO, USUARIO_FECHA_NAC
+    FROM [GD1C2023].[gd_esquema].[Maestra]
+    WHERE (USUARIO_DNI IS NOT NULL AND USUARIO_NOMBRE IS NOT NULL AND USUARIO_APELLIDO IS NOT NULL AND USUARIO_MAIL IS NOT NULL)
+    ORDER BY USUARIO_DNI;
+    SET IDENTITY_INSERT GAME_OF_JOINS.Usuario OFF;
+END;
+GO
+
+CREATE PROCEDURE migrar_pedido
+AS
+BEGIN
+	INSERT INTO GAME_OF_JOINS.Pedido
+	(pedido_nro, pedido_precio_envio, pedido_fecha, pedido_total_productos, pedido_total_cupones, pedido_tarifa, pedido_propina, pedido_total_servicio, pedido_tiempo_entrega_estimada, pedido_fecha_hora_entrega, pedido_estado, pedido_calificacion, pedido_observaciones)
+	SELECT PEDIDO_NRO, PEDIDO_PRECIO_ENVIO, PEDIDO_FECHA, PEDIDO_TOTAL_PRODUCTOS, PEDIDO_TOTAL_CUPONES, PEDIDO_TARIFA_SERVICIO, PEDIDO_PROPINA, PEDIDO_TOTAL_SERVICIO, PEDIDO_TIEMPO_ESTIMADO_ENTREGA, PEDIDO_FECHA_ENTREGA, PEDIDO_ESTADO, PEDIDO_CALIFICACION, PEDIDO_OBSERV
+	FROM [GD1C2023].[gd_esquema].[Maestra]
+	WHERE (PEDIDO_NRO is not null and PEDIDO_FECHA is not null)
+	ORDER BY PEDIDO_NRO
+END;
+GO
+
+CREATE PROCEDURE migrar_repartidor
+AS
+BEGIN
+	INSERT INTO GAME_OF_JOINS.Repartidor 
+	(repartidor_dni, repartidor_nombre, repartidor_apellido, repartidor_direccion, repartidor_telefono, repartidor_mail, repartidor_movilidad, repartidor_fecha_nacimiento)
+	SELECT DISTINCT REPARTIDOR_DNI, REPARTIDOR_NOMBRE, REPARTIDOR_APELLIDO, REPARTIDOR_DIRECION, REPARTIDOR_TELEFONO, REPARTIDOR_EMAIL, REPARTIDOR_TIPO_MOVILIDAD, REPARTIDOR_FECHA_NAC
+	FROM [GD1C2023].[gd_esquema].[Maestra]
+	WHERE (REPARTIDOR_DNI is not null AND REPARTIDOR_NOMBRE is not null AND REPARTIDOR_APELLIDO is not null AND REPARTIDOR_TELEFONO is not null AND  REPARTIDOR_EMAIL is not null AND  REPARTIDOR_TIPO_MOVILIDAD is not null AND  REPARTIDOR_FECHA_NAC is not null)
+END;
+GO
+
+
+CREATE PROCEDURE migrar_envio
+AS
+BEGIN
+	INSERT INTO GAME_OF_JOINS.Envio 
+	(envio_nro, envio_fecha, envio_estado, envio_precio, envio_precio_seguro, envio_direccion_origen, envio_direccion_destino, envio_localidad, envio_provincia, envio_distancia, envio_tiempo_estimado, envio_propina, envio_calificacion, envio_observaciones)
+	SELECT ENVIO_MENSAJERIA_NRO, ENVIO_MENSAJERIA_FECHA, ENVIO_MENSAJERIA_ESTADO, ENVIO_MENSAJERIA_PRECIO_ENVIO, ENVIO_MENSAJERIA_PRECIO_SEGURO, ENVIO_MENSAJERIA_DIR_ORIG, ENVIO_MENSAJERIA_DIR_DEST, ENVIO_MENSAJERIA_LOCALIDAD, ENVIO_MENSAJERIA_PROVINCIA, ENVIO_MENSAJERIA_KM, ENVIO_MENSAJERIA_TIEMPO_ESTIMADO, ENVIO_MENSAJERIA_PROPINA, ENVIO_MENSAJERIA_CALIFICACION, ENVIO_MENSAJERIA_OBSERV
+	FROM [GD1C2023].[gd_esquema].[Maestra]
+	WHERE ENVIO_MENSAJERIA_NRO is not null
+END;
+GO
+
+
+CREATE PROCEDURE migrar_servicio_mensajeria
+AS
+BEGIN
+	INSERT INTO GAME_OF_JOINS.ServicioMensajeria
+	(servicio_mensajeria_nro, servicio_mensajeria_fecha_solicitud, servicio_mensajeria_fecha_finalizacion, servicio_mensajeria_valor_asegurado, servicio_mensajeria_valor_seguro, servicio_mensajeria_total)
+	SELECT ENVIO_MENSAJERIA_NRO,ENVIO_MENSAJERIA_FECHA, ENVIO_MENSAJERIA_FECHA_ENTREGA, ENVIO_MENSAJERIA_VALOR_ASEGURADO, ENVIO_MENSAJERIA_PRECIO_SEGURO, ENVIO_MENSAJERIA_TOTAL
+	FROM [GD1C2023].[gd_esquema].[Maestra]
+	WHERE ENVIO_MENSAJERIA_NRO is not null
+END;
+GO
+
+
+CREATE PROCEDURE migrar_paquete
+AS
+BEGIN
+	INSERT INTO GAME_OF_JOINS.Paquete
+	(paquete_tipo, paquete_alto_max, paquete_ancho_max, paquete_largo_max, paquete_peso_max, paquete_tipo_precio)
+	SELECT PAQUETE_TIPO, PAQUETE_ALTO_MAX, PAQUETE_ANCHO_MAX, PAQUETE_LARGO_MAX, PAQUETE_PESO_MAX, PAQUETE_TIPO_PRECIO 
+	FROM [GD1C2023].[gd_esquema].[Maestra]
+END;
+GO
+
+
+CREATE PROCEDURE migrar_tarjeta
+AS
+BEGIN
+	INSERT INTO GAME_OF_JOINS.Tarjeta
+	(tarjeta_nro, tarjeta_marca)
+	SELECT MEDIO_PAGO_NRO_TARJETA, MARCA_TARJETA 
+	FROM [GD1C2023].[gd_esquema].[Maestra]
+	WHERE MEDIO_PAGO_NRO_TARJETA is not null
+END;
+GO
+
+
+CREATE PROCEDURE migrar_medio_pago
+AS
+BEGIN
+	INSERT INTO GAME_OF_JOINS.MedioDePago
+	(medio_pago_tipo)
+	SELECT MEDIO_PAGO_TIPO
+	FROM [GD1C2023].[gd_esquema].[Maestra]
+END;
+GO
+
+
+CREATE PROCEDURE migrar_operador_reclamo
+AS
+BEGIN
+	INSERT INTO GAME_OF_JOINS.OperadorReclamo
+	(operador_dni, operador_nombre, operador_apellido, operador_telefono, operador_direccion, operador_mail, operador_fecha_nacimiento)
+	SELECT OPERADOR_RECLAMO_DNI, OPERADOR_RECLAMO_NOMBRE, OPERADOR_RECLAMO_APELLIDO, OPERADOR_RECLAMO_TELEFONO, OPERADOR_RECLAMO_DIRECCION, OPERADOR_RECLAMO_MAIL, OPERADOR_RECLAMO_FECHA_NAC
+	FROM [GD1C2023].[gd_esquema].[Maestra]
+	WHERE OPERADOR_RECLAMO_DNI is not null
+END;
+GO
+
+
+CREATE PROCEDURE migrar_reclamo
+AS
+BEGIN
+	INSERT INTO GAME_OF_JOINS.Reclamo
+	(reclamo_nro, reclamo_tipo, reclamo_descripcion, reclamo_fecha_hora_creacion, reclamo_estado, reclamo_solucion, reclamo_fecha_hora_solucion, reclamo_calificacion)
+	SELECT RECLAMO_NRO, RECLAMO_TIPO, RECLAMO_DESCRIPCION, RECLAMO_FECHA, RECLAMO_ESTADO, RECLAMO_SOLUCION, RECLAMO_FECHA_SOLUCION, RECLAMO_CALIFICACION
+	FROM [GD1C2023].[gd_esquema].[Maestra]
+	WHERE RECLAMO_NRO is not null
+END;
+GO
+
+
+CREATE PROCEDURE migrar_cupon
+AS
+BEGIN
+	INSERT INTO GAME_OF_JOINS.Cupon
+	(cupon_nro, cupon_tipo, cupon_monto_descuento, cupon_fecha_alta, cupon_fecha_vencimiento)
+	SELECT CUPON_NRO, CUPON_TIPO, CUPON_MONTO, CUPON_FECHA_ALTA, CUPON_FECHA_VENCIMIENTO
+	FROM [GD1C2023].[gd_esquema].[Maestra]
+	WHERE CUPON_NRO is not null
+END;
+GO
+
+
+CREATE PROCEDURE migrar_cupon_reclamo
+AS
+BEGIN
+	INSERT INTO GAME_OF_JOINS.CuponReclamo
+	(cupon_reclamo_nro, cupon_reclamo_tipo, cupon_reclamo_monto, cupon_reclamo_fecha_alta, cupon_reclamo_fecha_vencimiento)
+	SELECT CUPON_RECLAMO_NRO, CUPON_RECLAMO_TIPO, CUPON_RECLAMO_MONTO, CUPON_RECLAMO_FECHA_ALTA, CUPON_RECLAMO_FECHA_VENCIMIENTO
+	FROM [GD1C2023].[gd_esquema].[Maestra]
+	WHERE CUPON_RECLAMO_NRO is not null
+END;
+GO
+
+
+CREATE PROCEDURE migrar_local
+AS
+BEGIN
+	INSERT INTO GAME_OF_JOINS.LocalRegistrado
+	(local_nombre, local_tipo, local_descripcion)
+	SELECT LOCAL_NOMBRE, LOCAL_TIPO, LOCAL_DESCRIPCION
+	FROM [GD1C2023].[gd_esquema].[Maestra]
+END;
+GO
+
+
+CREATE PROCEDURE migrar_direccion_local
+AS
+BEGIN
+	INSERT INTO GAME_OF_JOINS.DireccionLocal
+	(direccion_local_direccion, direccion_local_localidad, direccion_local_provincia)
+	SELECT LOCAL_DIRECCION, LOCAL_LOCALIDAD, LOCAL_PROVINCIA 
+	FROM [GD1C2023].[gd_esquema].[Maestra]
+END;
+GO
+
+
+CREATE PROCEDURE migrar_producto_local
+AS
+BEGIN
+	INSERT INTO GAME_OF_JOINS.ProductoLocal
+	(producto_codigo, producto_nombre, producto_descripcion, producto_cantidad, producto_precio_unitario)
+	SELECT PRODUCTO_LOCAL_CODIGO, PRODUCTO_LOCAL_NOMBRE, PRODUCTO_LOCAL_DESCRIPCION, PRODUCTO_CANTIDAD, PRODUCTO_LOCAL_PRECIO
+	FROM [GD1C2023].[gd_esquema].[Maestra]
+	WHERE PRODUCTO_LOCAL_CODIGO is not null 
+END;
+GO
+
+
+CREATE PROCEDURE migrar_direccion_usuario
+AS
+BEGIN
+	INSERT INTO GAME_OF_JOINS.DireccionUsuario
+	(direccion_usuario_nombre, direccion_usuario_direccion, direccion_usuario_localidad, direccion_usuario_provincia)
+	SELECT DIRECCION_USUARIO_NOMBRE, DIRECCION_USUARIO_DIRECCION, DIRECCION_USUARIO_LOCALIDAD, DIRECCION_USUARIO_PROVINCIA 
+	FROM [GD1C2023].[gd_esquema].[Maestra]
+	WHERE DIRECCION_USUARIO_NOMBRE is not NULL
+END;
+GO
+
+
+DROP PROCEDURE migrar_cupon
+DROP PROCEDURE migrar_cupon_reclamo
+DROP PROCEDURE migrar_direccion_local
+DROP PROCEDURE migrar_direccion_usuario
+DROP PROCEDURE migrar_envio
+DROP PROCEDURE migrar_local
+DROP PROCEDURE migrar_medio_pago
+DROP PROCEDURE migrar_operador_reclamo
+DROP PROCEDURE migrar_paquete
+DROP PROCEDURE migrar_pedido
+DROP PROCEDURE migrar_producto_local
+DROP PROCEDURE migrar_reclamo
+DROP PROCEDURE migrar_repartidor
+DROP PROCEDURE migrar_servicio_mensajeria
+DROP PROCEDURE migrar_tarjeta
+DROP PROCEDURE migrar_usuario
+
+------------------------------------- Tablas ---------------------------------------------------------------
+CREATE TABLE GAME_OF_JOINS.Usuario(
 	usuario_dni decimal(18,0) IDENTITY PRIMARY KEY,
 	usuario_nombre nvarchar(255) NULL,
 	usuario_apellido nvarchar(255) NULL,
 	usuario_mail nvarchar(255) NULL,
-	usuario_direccion decimal(18,0) FOREIGN KEY REFERENCES DireccionUsuario(direccion_usuario_id),
+	usuario_direccion decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.DireccionUsuario(direccion_usuario_id),
 	usuario_telefono decimal(18,0) NULL,
 	usuario_fecha_registro datetime2(3) NULL,
 	usuario_fecha_nacimiento date NULL
 );
 
-/*
-CREATE PROCEDURE migrar_usuario
-AS
-BEGIN
-	INSERT INTO Usuario
-	(usuario_dni, usuario_nombre, usuario_apellido, usuario_mail, usuario_telefono, usuario_fecha_registro, usuario_fecha_nacimiento)
-	SELECT USUARIO_DNI, USUARIO_NOMBRE, USUARIO_APELLIDO, USUARIO_MAIL, USUARIO_TELEFONO, USUARIO_FECHA_REGISTRO, USUARIO_FECHA_NACIMIENTO
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-	WHERE (USUARIO_DNI is not null and USUARIO_NOMBRE is not null and USUARIO_APELLIDO is not null and USUARIO_MAIL is not null)
-	ORDER BY USUARIO_DNI
-END
-*/
 
-CREATE TABLE Pedido(
+CREATE TABLE GAME_OF_JOINS.Pedido(
 	pedido_nro decimal(18,0) IDENTITY PRIMARY KEY, 
-	pedido_usuario decimal(18,0) FOREIGN KEY REFERENCES Usuario(usuario_dni), --usuario_dni
-	pedido_envio decimal(18,0) FOREIGN KEY REFERENCES Envio(envio_nro), --envio_nro
-	pedido_local decimal(18,0) FOREIGN KEY REFERENCES LocalRegistrado(local_id), --local_id
-	pedido_medio_de_pago decimal(18,0) FOREIGN KEY REFERENCES MedioDePago(medio_pago_id), --medio_de_pago_id
+	pedido_usuario decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.Usuario(usuario_dni), --usuario_dni
+	pedido_envio decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.Envio(envio_nro), --envio_nro
+	pedido_precio_envio decimal(18,2) NULL,
+	pedido_local decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.LocalRegistrado(local_id), --local_id
+	pedido_medio_de_pago decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.MedioDePago(medio_pago_id), --medio_de_pago_id
+	pedido_fecha datetime2(3) NULL,
+	pedido_total_productos decimal(18,2) NOT NULL,
+	pedido_total_cupones decimal(18,3) NULL,
 	pedido_tarifa decimal(18,2) NULL,
 	pedido_propina decimal(18,2) NULL,
-	pedido_fecha datetime2(3) NULL,
+	pedido_total_servicio decimal(18,2) NULL,
 	pedido_tiempo_entrega_estimada decimal(18,2) NULL,
 	pedido_fecha_hora_entrega datetime2(3) NULL,
-	pedido_observaciones nvarchar(255) NULL,
-	pedido_estado decimal(18,0) FOREIGN KEY REFERENCES EstadoPedido(estado_pedido_id), --estado_pedido_id
-	pedido_calificacion decimal(18,0) NULL
-);
-
-/*
-CREATE PROCEDURE migrar_pedido
-AS
-BEGIN
-	INSERT INTO Pedido
-	(pedido_nro, pedido_fecha, pedido_tarifa, pedido_propina, pedido_tiempo_entrega_estimada, pedido_fecha_hora_entrega, pedido_calificacion, pedido_observeciones, pedido_estado)
-	SELECT PEDIDO_NUMERO, PEDIDO_FECHA, PEDIDO_TARIFA_SERVICIO, PEDIDO_PROPINA, PEDIDO_ENTREGA_ESTIMADA, PEDIDO_FECHA_ENTREGA, PEDIDO_CALIFICACION, PEDIDO_OBSERV, PEDIDO_ESTADO
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-	WHERE (PEDIDO_NUMERO is not null and PEDIDO_FECHA is not null)
-	ORDER BY PEDIDO_NUMERO
-END
-*/
-
-CREATE TABLE EstadoPedido(
-	estado_pedido_id decimal(18,0) IDENTITY PRIMARY KEY,
-	estado_pedido_pedido decimal(18,0) FOREIGN KEY REFERENCES Pedido(pedido_nro)--pedido_nro 
+	pedido_estado nvarchar(50) NULL,     --decimal(18,0) FOREIGN KEY REFERENCES EstadoPedido(estado_pedido_id), --estado_pedido_id	
+	pedido_calificacion decimal(18,0) NULL,	
+	pedido_observaciones nvarchar(255) NULL
 );
 
 
-CREATE TABLE Repartidor(
+CREATE TABLE GAME_OF_JOINS.Repartidor(
 	repartidor_dni decimal(18,0) NOT NULL PRIMARY KEY,
 	repartidor_movilidad nvarchar(50) NULL,
 	repartidor_nombre nvarchar(255) NULL,
@@ -76,73 +257,46 @@ CREATE TABLE Repartidor(
 	repartidor_fecha_nacimiento date NULL
 );
 
-/*
-CREATE PROCEDURE migrar_repartidor
-AS
-BEGIN
-	INSERT INTO Repartidor 
-	(repartidor_dni, repartidor_nombre, repartidor_apellido, repartidor_telefono, repartidor_mail, repartidor_movilidad, repartidor_fecha_nacimiento)
-	SELECT REPARTIDOR_DNI, REPARTIDOR_NOMBRE, REPARTIDOR_APELLIDO, REPARTIDOR_TELEFONO, REPARTIDOR_MAIL, REPARTIDOR_TIPO_MOVILIDAD, REPARTIDOR_FECHA_NAC
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-	WHERE (REPARTIDOR_DNI, REPARTIDOR_NOMBRE, REPARTIDOR_APELLIDO, REPARTIDOR_TELEFONO, REPARTIDOR_MAIL, REPARTIDOR_TIPO_MOVILIDAD, REPARTIDOR_FECHA_NAC is not null)
-END
-*/
 
-/*CREATE TABLE Movilidad(
-	tipo_movilidad_id nvarchar(50) NULL PRIMARY KEY,
+CREATE TABLE Movilidad(
+	tipo_movilidad_id nvarchar(50)  NOT NULL PRIMARY KEY,
 	movilidad_nombre varchar(15)
-)*/
+)
 
 
-CREATE TABLE Envio(
+CREATE TABLE GAME_OF_JOINS.Envio(
 	envio_nro decimal(18,0) IDENTITY PRIMARY KEY,
-	envio_repartidor decimal(18,0) FOREIGN KEY REFERENCES Repartidor(repartidor_dni),--repartidor_id
+	envio_repartidor decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.Repartidor(repartidor_dni),--repartidor_dni
+	envio_fecha datetime2(3) NULL,
+	envio_estado nvarchar(50) NULL,
 	envio_direccion_origen nvarchar(255) NULL,
 	envio_direccion_destino nvarchar(255) NULL,
 	envio_localidad nvarchar(255) NULL,
 	envio_provincia nvarchar(255) NULL,
+	envio_distancia decimal(18,2) NULL,
+	envio_tiempo_estimado decimal(18,2) NULL,
 	envio_precio decimal(18,2) NULL,
-	envio_propina decimal(18,2) NULL
+	envio_precio_seguro decimal(18,2) NULL,
+	envio_propina decimal(18,2) NULL,
+	envio_calificacion decimal(18,0) NULL,
+	envio_observaciones nvarchar(255) NULL
 );
 
-/*
-CREATE PROCEDURE migrar_envio
-AS
-BEGIN
-	INSERT INTO Envio 
-	(envio_nro, envio_precio, envio_direccion_origen, envio_direccion_destino, envio_localidad, envio_provincia, envio_propina)
-	SELECT (ENVIO_MENSAJERIA_NRO, ENVIO_MENSAJERIA_PRECIO_ENVIO, ENVIO_MENSAJERIA_DIRECCION_ORIGEN, ENVIO_MENSAJERIA_DIRECCION_DESTINO, ENVIO_MENSAJERIA_LOCALIDAD, ENVIO_MENSAJERIA_PROVINCIA, ENVIO_MENSAJERIA_PROPINA)
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-END
-*/
 
-
-CREATE TABLE ServicioMensajeria(
-	servicio_mensajeria_id int NOT NULL PRIMARY KEY,
-	servicio_mensajeria_usuario int NOT NULL,
-	servicio_mensajeria_medio_pago int,
-	servicio_mensajeria_fecha_solicitud int,
-	servicio_mensajeria_fecha_finalizacion int,
-	servicio_mensajeria_valor_asegurado decimal,
-	servicio_mensajeria_valor_seguro decimal,
-	--servicio_mensajeria_estado ?,
-	servicio_mensajeria_calificacion decimal(18,0),
+CREATE TABLE GAME_OF_JOINS.ServicioMensajeria(
+	servicio_mensajeria_nro decimal(18,0) NOT NULL PRIMARY KEY,
+	servicio_mensajeria_envio decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.Envio(envio_nro),
+	sercicio_mensajeria_precio_envio decimal(18,0),
+	servicio_mensajeria_fecha_solicitud datetime2(3),
+	servicio_mensajeria_fecha_finalizacion datetime2(3),
+	servicio_mensajeria_valor_asegurado decimal(18,2),
+	servicio_mensajeria_valor_seguro decimal(18,2),
+	servicio_mensajeria_total decimal(18,2),
 );
 
-/*
-CREATE PROCEDURE migrar_servicio_mensajeria
-AS
-BEGIN
-	INSERT INTO ServicioMensajeria
-	(servicio_mensajeria_id , servicio_mensajeria_valor_asegurado, servicio_mensajeria_valor_seguro, servicio_mensajeria_calificacion)
-	SELECT ENVIO_MENSAJERIA_NRO, ENVIO_MENSAJERIA_VALOR_ASEGURADO, ENVIO_MENSAJERIA_VALOR_SEGURO, ENVIO_MENSAJERIA_CALIFICACION 
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-END
-*/
 
-
-CREATE TABLE Paquete(
-	paquete_id int IDENTITY PRIMARY KEY,
+CREATE TABLE GAME_OF_JOINS.Paquete(
+	paquete_id int IDENTITY PRIMARY KEY,--NO ESTÁ DEFINIDO EN LA TABLA
 	paquete_tipo nvarchar(50) NULL,
 	paquete_alto_max decimal(18,2) NULL,
 	paquete_ancho_max decimal(18,2) NULL,
@@ -151,66 +305,24 @@ CREATE TABLE Paquete(
 	paquete_tipo_precio decimal(18,2) NULL
 );
 
-/*
-CREATE PROCEDURE migrar_paquete
-AS
-BEGIN
-	INSERT INTO Paquete
-	(paquete_tipo, paquete_alto_max, paquete_ancho_max, paquete_largo_max, paquete_peso_max, paquete_tipo_precio)
-	SELECT PAQUETE_TIPO, PAQUETE_ALTO_MAX, PAQUETE_ANCHO_MAX, PAQUETE_LARGO_MAX, PAQUETE_PESO_MAX, PAQUETE_TIPO_PRECIO 
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-END
-*/
 
-CREATE TABLE TipoPaquete(
-	tipo_paquete_id int NOT NULL PRIMARY KEY,
-	tipo_paquete_nombre varchar(15)
-);
-
-CREATE TABLE MedioDePago(
-	medio_pago_id decimal(18,0) IDENTITY PRIMARY KEY,
-	medio_pago_usuario decimal(18,0) FOREIGN KEY REFERENCES Usuario(usuario_dni),--usuario_dni
-	medio_pago_tipo nvarchar(50) NULL,
-	medio_pago_tarjeta decimal(18,0) FOREIGN KEY REFERENCES Tarjeta(tarjeta_id)--
-);
-
-/*
-CREATE PROCEDURE migrar_medio_pago
-AS
-BEGIN
-	INSERT INTO MedioDePago
-	(medio_pago_tipo)
-	SELECT MEDIO_PAGO_TIPO
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-END
-*/
-
-CREATE TABLE Tarjeta(
-	tarjeta_id decimal(18,0) IDENTITY PRIMARY KEY,
+CREATE TABLE GAME_OF_JOINS.Tarjeta(
+	tarjeta_id decimal(18,0) IDENTITY PRIMARY KEY NOT NULL,
 	tarjeta_nro nvarchar(100) NULL,
 	tarjeta_marca nvarchar(100) NULL
 );
 
-/*
-CREATE PROCEDURE migrar_tarjeta
-AS
-BEGIN
-	INSERT INTO Tarjeta
-	(tarjeta_nro, tarjeta_marca)
-	SELECT MEDIO_PAGO_NRO_TARJETA, MARCA_TARJETA 
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-END
-*/
 
-/*CREATE TABLE tipo_medio_pago(
-	tipo_medio_pago_id int NOT NULL PRIMARY KEY,
-	tipo_medio_pago_mp int
-)*/
+CREATE TABLE GAME_OF_JOINS.MedioDePago(
+	medio_pago_id decimal(18,0) IDENTITY PRIMARY KEY,
+	medio_pago_usuario decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.Usuario(usuario_dni),--usuario_dni
+	medio_pago_tipo nvarchar(50) NULL,
+	medio_pago_tarjeta decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.Tarjeta(tarjeta_id)--
+);
 
 
-CREATE TABLE OperadorReclamo(
+CREATE TABLE GAME_OF_JOINS.OperadorReclamo(
 	operador_dni decimal(18,0) NOT NULL PRIMARY KEY,
-	operador_reclamo int NOT NULL,--reclamo_id
 	operador_nombre nvarchar(255) NULL,
 	operador_apellido nvarchar(255) NULL,
 	operador_telefono decimal(18,0) NULL,
@@ -219,153 +331,94 @@ CREATE TABLE OperadorReclamo(
 	operador_fecha_nacimiento date NULL,
 );
 
-/*
-CREATE PROCEDURE migrar_operador_reclamo
-AS
-BEGIN
-	INSERT INTO OperadorReclamo
-	(operador_dni, operador_nombre, operador_apellido, operador_telefono, operador_direccion, operador_mail, operador_fecha_nacimiento)
-	SELECT OPERADOR_DNI, OPERADOR_NOMBRE, OPERADOR_APELLIDO, OPERADOR_TELEFONO, OPERADOR_DIRECCION, OPERADOR_MAIL, OPERADOR_FECHA_NAC
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-END
-*/
 
-CREATE TABLE Reclamo(
-	reclamo_id decimal(18,0) PRIMARY KEY,
-	reclamo_pedido decimal(18,0) FOREIGN KEY REFERENCES Pedido(pedido_nro),--pedido_id
-	reclamo_usuario decimal(18,0) FOREIGN KEY REFERENCES Usuario(usuario_dni),--usuario_dni
+CREATE TABLE GAME_OF_JOINS.Reclamo(
+	reclamo_nro decimal(18,0) PRIMARY KEY,
+	reclamo_pedido decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.Pedido(pedido_nro),--pedido_id
+	reclamo_usuario decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.Usuario(usuario_dni),--usuario_dni
 	reclamo_tipo nvarchar(50) NULL,
 	reclamo_descripcion nvarchar(255) NULL,
 	reclamo_fecha_hora_creacion datetime2(3) NULL,
-	reclamo_operador decimal(18,0) FOREIGN KEY REFERENCES OperadorReclamo(operador_dni),--operador_id
+	reclamo_operador decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.OperadorReclamo(operador_dni),--operador_id
 	reclamo_estado nvarchar(50) NULL,
 	reclamo_solucion nvarchar(255) NULL,
 	reclamo_fecha_hora_solucion datetime2(3) NULL,
 	reclamo_calificacion decimal(18,0) NULL,
 );
 
-/*
-CREATE PROCEDURE migrar_reclamo
-AS
-BEGIN
-	INSERT INTO Reclamo
-	(reclamo_id, reclamo_tipo, reclamo_descripcion, reclamo_fecha_hora_creacion, reclamo_estado, reclamo_solucion, reclamo_fecha_hora_solucion, reclamo_calificacion)
-	SELECT RECLAMO_NRO, RECLAMO_TIPO, RECLAMO_DESCRIPCION, RECLAMO_FECHA, RECLAMO_ESTADO, RECLAMO_SOLUCION, RECLAMO_FECHA_SOLUCION, RECLAMO_CALIFICACION
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-END
-*/
 
-/*CREATE TABLE EstadoReclamo(
-	estado_reclamo_id decimal(18,0) NOT NULL PRIMARY KEY,
-	estado_reclamo_reclamo int NOT NULL--reclamo_id 
-)*/
-
-CREATE TABLE Cupon(
-	cupon_nro decimal(18,0) IDENTITY PRIMARY KEY,
-	cupon_usuario decimal(18,0) FOREIGN KEY REFERENCES Usuario(usuario_dni), --usuario_dni
+CREATE TABLE GAME_OF_JOINS.Cupon(
+	cupon_nro decimal(18,0) PRIMARY KEY,
+	cupon_usuario decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.Usuario(usuario_dni), --usuario_dni
 	cupon_tipo nvarchar(50) NULL,
 	cupon_monto_descuento decimal(18,2) NULL,
 	cupon_fecha_alta datetime2(3) NULL,
 	cupon_fecha_vencimiento datetime2(3) NULL,
 );
 
-/*
-CREATE PROCEDURE migrar_cupon
-AS
-BEGIN
-	INSERT INTO Cupon
-	(cupon_nro, cupon_tipo, cupon_monto_descuento, cupon_fecha_alta, cupon_fecha_vencimiento)
-	SELECT CUPON_NRO, CUPON_TIPO. CUPON_MONTO, CUPON_FECHA_ALTA, CUPON_FECHA_VENCIMIENTO
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-END
-*/
 
-CREATE TABLE CuponPedido(
-	cupon_pedido_id decimal(18,0) IDENTITY PRIMARY KEY,
-	cupon_pedido_pedido decimal(18,0) FOREIGN KEY REFERENCES Pedido(pedido_nro), --pedido_nro
+CREATE TABLE GAME_OF_JOINS.CuponPedido(
+	cupon_pedido_id decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.Cupon(cupon_nro) PRIMARY KEY,
+	cupon_pedido_pedido decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.Pedido(pedido_nro), --pedido_nro
 );
 
-CREATE TABLE CuponReclamo(
+
+CREATE TABLE GAME_OF_JOINS.CuponReclamo(
 	cupon_reclamo_nro decimal(18,0) NOT NULL PRIMARY KEY,
-	cupon_reclamo_usuario decimal(18,0) FOREIGN KEY REFERENCES Usuario(usuario_dni), --usuario_dni
+	cupon_reclamo_usuario decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.Usuario(usuario_dni), --usuario_dni
 	cupon_reclamo_tipo nvarchar(50) NULL,
 	cupon_reclamo_monto decimal(18,2) NULL,
 	cupon_reclamo_fecha_alta datetime2(3) NULL,
 	cupon_reclamo_fecha_vencimiento datetime2(3) NULL,
 );
 
-/*
-CREATE PROCEDURE migrar_cupon_reclamo
-AS
-BEGIN
-	INSERT INTO CuponReclamo
-	(cupon_reclamo_nro, cupon_reclamo_tipo, cupon_reclamo_monto, cupon_reclamo_fecha_alta, cupon_reclamo_fecha_vencimiento)
-	SELECT CUPON_RECLAMO_NRO, CUPON_RECLAMO_TIPO. CUPON_RECLAMO_MONTO, CUPON_RECLAMO_FECHA_ALTA, CUPON_RECLAMO_FECHA_VENCIMIENTO
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-END
-*/
 
-CREATE TABLE LocalRegistrado(
+CREATE TABLE GAME_OF_JOINS.AtencionLocal(
+	atencion_id decimal(18,0) IDENTITY NOT NULL PRIMARY KEY,
+	atencion_dias nvarchar(50) NULL,
+	atencion_horario_apertura decimal(18,0) NULL,
+	atencion_horario_cierre decimal(18,0) NULL
+);
+
+
+CREATE TABLE GAME_OF_JOINS.LocalRegistrado(
 	local_id decimal(18,0) IDENTITY PRIMARY KEY,
 	local_nombre nvarchar(100) NULL,
 	local_tipo nvarchar(50) NULL,
 	local_descripcion nvarchar(255) NULL,
-	local_direccion nvarchar(255) NULL,
-	local_atencion int NOT NULL
+--	local_direccion decimal(18,0) NULL FOREIGN KEY REFERENCES DireccionLocal(direccion_local_id),
+	local_atencion decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.AtencionLocal(atencion_id)
 );
 
-/*
-CREATE PROCEDURE migrar_local
-AS
-BEGIN
-	INSERT INTO LocalRegistrado
-	(local_nombre, local_tipo, local_descripcion, local_direccion)
-	SELECT LOCAL_NOMBRE, LOCAL_TIPO, LOCAL_DESCRIPCION, LOCAL_DIRECCION
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-END
-*/
 
-CREATE TABLE TipoLocal(
-	tipo_local_id decimal(18,0) NOT NULL PRIMARY KEY,
-	tipo_local_nombre varchar(15)
+CREATE TABLE GAME_OF_JOINS.DireccionLocal(
+	--direccion_local_id decimal(18,0) IDENTITY PRIMARY KEY NOT NULL,
+	direccion_local_local decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.LocalRegistrado(local_id), 
+	direccion_local_direccion nvarchar(255) NULL,
+	direccion_local_localidad nvarchar(255) NULL,
+	direccion_local_provincia nvarchar(255) NULL
 );
 
-CREATE TABLE Categoria(
-	categoria_local_id int NOT NULL PRIMARY KEY,
-	categoria_local_tipo int NOT NULL,--tipo_local_id 
-	categoria_local_nombre varchar(15)
+
+CREATE TABLE GAME_OF_JOINS.Categoria(
+	categoria_local_local decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.LocalRegistrado(local_id),
+	--categoria_local_tipo int NOT NULL,--tipo_local_id 
+	categoria_local_nombre nvarchar(50) NULL
 );
 
-CREATE TABLE DiasHoraAtencion(
-	atencion_id int NOT NULL PRIMARY KEY,
-	atencion_dias_semana ?,
-	atencion_horario_apertura time,
-	atencion_horario_cierre time
-);
 
-CREATE TABLE ProductoLocal(
-	producto_codigo nvarchar(50) IDENTITY PRIMARY KEY NOT NULL,
+CREATE TABLE GAME_OF_JOINS.ProductoLocal(
+	producto_codigo nvarchar(50) PRIMARY KEY NOT NULL,
 	producto_nombre nvarchar(50) NULL,
 	producto_descripcion nvarchar(255) NULL,
-	producto_local decimal(18,0) FOREIGN KEY REFERENCES LocalRegistrado(local_id) NOT NULL,--local_id
+	producto_local decimal(18,0) FOREIGN KEY REFERENCES GAME_OF_JOINS.LocalRegistrado(local_id) NOT NULL,--local_id
 	producto_cantidad decimal(18,0),
 	producto_precio_unitario decimal(18,2),
 );
 
-/*
-CREATE PROCEDURE migrar_producto_local
-AS
-BEGIN
-	INSERT INTO ProductoLocal
-	(producto_codigo, producto_nombre, producto_descripcion, producto_cantidad, producto_precio_unitario)
-	SELECT PRODUCTO_LOCAL_CODIGO, PRODUCTO_LOCAL_NOMBRE, PRODUCTO_LOCAL_DESCRIPCION, PRODUCTO_CANTIDAD, PRODUCTO_LOCAL_PRECIO
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-END
-*/
 
-CREATE TABLE DireccionUsuario(
-	direccion_usuario_id decimal(18,0) IDENTITY PRIMARY KEY NOT NULL,
-	direccion_usuario_usuario decimal(18,0) FOREIGN KEY REFERENCES Usuario(usuario_dni), 
+CREATE TABLE GAME_OF_JOINS.DireccionUsuario(
+	direccion_usuario_id decimal(18,0) IDENTITY PRIMARY KEY NOT NULL, 
 	direccion_usuario_nombre nvarchar(50) NULL,
 	direccion_usuario_direccion nvarchar(255) NULL,
 	direccion_usuario_localidad nvarchar(255) NULL,
@@ -373,34 +426,28 @@ CREATE TABLE DireccionUsuario(
 );
 
 
-/*
-CREATE PROCEDURE migrar_direccion_usuario
-AS
-BEGIN
-	INSERT INTO Direccion
-	(direccion_usuario_nombre, direccion_usuario_direccion, direccion_usuario_localidad, direccion_usuario_provincia)
-	SELECT DIRECCION_USUARIO_NOMBRE, DIRECCION_USUARIO_DIRECCION, DIRECCION_USUARIO_LOCALIDAD, DIRECCION_USUARIO_PROVINCIA 
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-END
-*/
+DROP TABLE GAME_OF_JOINS.Repartidor
+DROP TABLE GAME_OF_JOINS.Envio
+DROP TABLE GAME_OF_JOINS.ServicioMensajeria
+DROP TABLE GAME_OF_JOINS.Pedido
+DROP TABLE GAME_OF_JOINS.Reclamo
+DROP TABLE GAME_OF_JOINS.CuponPedido
+DROP TABLE GAME_OF_JOINS.Cupon
 
-
-/*
-CREATE TABLE Localidad(
-	localidad_id int NOT NULL PRIMARY KEY,
-	localidad_provincia int NOT NULL,--provincia_id
-	localidad_nombre varchar(40)
-);
-
-CREATE TABLE Provincia(
-	provincia_id int NOT NULL PRIMARY KEY,
-	provincia_localidad int NOT NULL
-);
-*/
-
-/*
-Falta de la tabla maestra: PEDIDO_TOTAL_PRODUCTOS, ENVIO_MENSAJERIA_KM, ENVIO_MENSAJERIA_PRECIO_SEGURO, ENVIO_MENSAJERIA_TOTAL, ENVIO_MENSAJERIA_OBSERV, ENVIO_MENSAJERIA_FECHA,
-ENVIO_MENSAJERIA_FECHA_ENTREGA, ENVIO_MENSAJERIA_TIEMPO_ESTIMADO, ENVIO_MENSAJERIA_ESTADO, PEDIDO_PRECIO_ENVIO, PEDIDO_TOTAL_CUPONES, PEDIDO_TOTAL_SERVICIO,
-PEDIDO_TIEMPO_ESTIMADO_ENTREGA, LOCAL_LOCALIDAD, LOCAL_PROVINCIA, HORARIO_LOCAL_HORA_APERTURA, HORARIO_LOCAL_HORA_CIERRE, HORARIO_LOCAL_DIA, OPERADOR_RECLAMO_NOMBRE, 
-OPERADOR_RECLAMO_APELLIDO, OPERADOR_RECLAMO_DNI, OPERADOR_RECLAMO_TELEFONO, OPERADOR_RECLAMO_DIRECCION, OPERADOR_RECLAMO_MAIL, OPERADOR_RECLAMO_FECHA_NAC
-*/
+---------------------------------------------Execs---------------------------------------------------
+EXEC migrar_cupon
+EXEC migrar_cupon_reclamo
+EXEC migrar_direccion_local
+EXEC migrar_direccion_usuario
+EXEC migrar_envio --revisar
+EXEC migrar_local
+EXEC migrar_medio_pago
+EXEC migrar_operador_reclamo --revisar
+EXEC migrar_paquete
+EXEC migrar_pedido --revisar
+EXEC migrar_producto_local --revisar
+EXEC migrar_reclamo
+EXEC migrar_repartidor 
+EXEC migrar_servicio_mensajeria
+EXEC migrar_tarjeta
+EXEC migrar_usuario 
