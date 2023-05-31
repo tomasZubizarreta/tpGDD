@@ -34,12 +34,6 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Tarjeta')
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Envio')
     DROP TABLE GAME_OF_JOINS.Envio;
 
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'EstadoPedido')
-    DROP TABLE GAME_OF_JOINS.EstadoPedido;
-
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'EstadoEnvio')
-    DROP TABLE GAME_OF_JOINS.EstadoEnvio;
-
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Repartidor')
     DROP TABLE GAME_OF_JOINS.Repartidor;
 
@@ -73,6 +67,17 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Localidad')
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Provincia') -- HACE FALTA CREARLA
     DROP TABLE GAME_OF_JOINS.Provincia;
 
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'EstadoPedido')
+    DROP TABLE GAME_OF_JOINS.EstadoPedido;
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'EstadoEnvio')
+    DROP TABLE GAME_OF_JOINS.EstadoEnvio;
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'EstadoReclamo')
+    DROP TABLE GAME_OF_JOINS.EstadoReclamo;
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'LocalTipo')
+    DROP TABLE GAME_OF_JOINS.LocalTipo;
 
 ------------------------------------DROP PROCEDURES PRE MIGRACION------------------------------------
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_usuario' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
@@ -113,10 +118,16 @@ IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_estado_envio' AND s
     DROP PROCEDURE GAME_OF_JOINS.migrar_estado_envio;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_estado_pedido' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
     DROP PROCEDURE GAME_OF_JOINS.migrar_estado_pedido;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_estado_reclamo' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
+    DROP PROCEDURE GAME_OF_JOINS.migrar_estado_reclamo;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_localidad' AND schema_id = SCHEMA_ID('GAME_OF_JOINS')) --LISTO
     DROP PROCEDURE GAME_OF_JOINS.migrar_localidad;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_movilidad' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
     DROP PROCEDURE GAME_OF_JOINS.migrar_movilidad;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_categoria' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
+    DROP PROCEDURE GAME_OF_JOINS.migrar_categoria;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_local_tipo' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
+    DROP PROCEDURE GAME_OF_JOINS.migrar_local_tipo;
 GO
 
 --------------------------- Creacion del schema --------------------------- 
@@ -129,14 +140,40 @@ GO
 
 --------------------------- Creacion de tablas ---------------------------- 
 
-CREATE TABLE GAME_OF_JOINS.localidad (
+CREATE TABLE GAME_OF_JOINS.EstadoReclamo (
+	estado_reclamo_id int IDENTITY PRIMARY KEY,
+	estado nvarchar(255) null
+);
+
+CREATE TABLE GAME_OF_JOINS.EstadoEnvio(
+	estado_envio_id int IDENTITY PRIMARY KEY,
+	estado nvarchar(50) null
+);
+
+CREATE TABLE GAME_OF_JOINS.EstadoPedido(
+	estado_pedido_id int IDENTITY PRIMARY KEY,
+	estado nvarchar(50) null
+);
+
+CREATE TABLE GAME_OF_JOINS.Localidad (
 	localidad_id int IDENTITY PRIMARY KEY,
 	localidad nvarchar(255) null
 );
 
-CREATE TABLE GAME_OF_JOINS.movilidad (
+CREATE TABLE GAME_OF_JOINS.Movilidad (
 	movilidad_id int IDENTITY PRIMARY KEY,
 	movilidad nvarchar(255) null
+);
+
+CREATE TABLE GAME_OF_JOINS.LocalTipo (
+	local_tipo_id int IDENTITY PRIMARY KEY,
+	local_tipo nvarchar(50) NULL
+);
+
+CREATE TABLE GAME_OF_JOINS.Categoria (
+	categoria_id int IDENTITY PRIMARY KEY,
+	--local_tipo_id int REFERENCES GAME_OF_JOINS.LocalTipo NOT NULL,
+	categoria nvarchar(50) NULL
 );
 
 
@@ -185,11 +222,6 @@ CREATE TABLE GAME_OF_JOINS.Paquete(
 	paquete_tipo_precio decimal(18,2) NULL
 );
 
-CREATE TABLE GAME_OF_JOINS.EstadoEnvio(
-	estado_envio_id int IDENTITY PRIMARY KEY,
-	estado nvarchar(50) null
-);
-
 CREATE TABLE GAME_OF_JOINS.Envio(
 	envio_nro decimal(18,0) IDENTITY PRIMARY KEY,
 	envio_repartidor decimal(18,0) REFERENCES GAME_OF_JOINS.Repartidor(repartidor_dni),
@@ -217,14 +249,9 @@ CREATE TABLE GAME_OF_JOINS.MedioDePago(
 CREATE TABLE GAME_OF_JOINS.LocalRegistrado(
 	local_id decimal(18,0) IDENTITY PRIMARY KEY,
 	local_nombre nvarchar(100) NULL,
-	local_tipo nvarchar(50) NULL,
+	local_tipo_id int REFERENCES GAME_OF_JOINS.LocalTipo(local_tipo_id),
 	local_descripcion nvarchar(255) NULL,
 	local_atencion decimal(18,0) REFERENCES GAME_OF_JOINS.AtencionLocal(atencion_id)
-);
-
-CREATE TABLE GAME_OF_JOINS.Categoria(
-	categoria_local_local decimal(18,0) REFERENCES GAME_OF_JOINS.LocalRegistrado(local_id),
-	categoria_local_nombre nvarchar(50) NULL
 );
 
 CREATE TABLE GAME_OF_JOINS.ProductoLocal(
@@ -273,12 +300,6 @@ CREATE TABLE GAME_OF_JOINS.OperadorReclamo(
 	operador_fecha_nacimiento date NULL
 );
 
-
-CREATE TABLE GAME_OF_JOINS.EstadoPedido(
-	estado_pedido_id int IDENTITY PRIMARY KEY,
-	estado nvarchar(50) null
-);
-
 CREATE TABLE GAME_OF_JOINS.Pedido(
 	pedido_nro decimal(18,0) IDENTITY PRIMARY KEY,
 	pedido_usuario decimal(18,0) REFERENCES GAME_OF_JOINS.Usuario(usuario_dni),
@@ -301,7 +322,7 @@ CREATE TABLE GAME_OF_JOINS.Reclamo(
 	reclamo_descripcion nvarchar(255) NULL,
 	reclamo_fecha_hora_creacion datetime2(3) NULL,
 	reclamo_operador decimal(18,0) REFERENCES GAME_OF_JOINS.OperadorReclamo(operador_dni),
-	reclamo_estado nvarchar(50) NULL,
+	reclamo_estado int REFERENCES GAME_OF_JOINS.EstadoReclamo(estado_reclamo_id),
 	reclamo_solucion nvarchar(255) NULL,
 	reclamo_fecha_hora_solucion datetime2(3) NULL,
 	reclamo_calificacion decimal(18,0) NULL
@@ -332,6 +353,25 @@ CREATE TABLE GAME_OF_JOINS.CuponReclamo(
 GO
 
 ------------------------------------------------------------------ STORED PROCEDURES PARA MIGRACION
+
+CREATE PROCEDURE GAME_OF_JOINS.migrar_categoria --MOMENTANEO
+AS
+	BEGIN
+		INSERT INTO GAME_OF_JOINS.Categoria(categoria)
+		SELECT TOP 1 'CATEGORIA'
+		FROM [GD1C2023].[gd_esquema].[Maestra]
+	END
+GO
+
+CREATE PROCEDURE GAME_OF_JOINS.migrar_local_tipo
+AS
+	BEGIN
+		INSERT INTO GAME_OF_JOINS.LocalTipo(local_tipo)
+		SELECT DISTINCT M.LOCAL_TIPO
+		FROM [GD1C2023].[gd_esquema].[Maestra] AS M
+		WHERE M.LOCAL_TIPO IS NOT NULL
+	END
+GO
 
 CREATE PROCEDURE GAME_OF_JOINS.migrar_movilidad
 AS
@@ -391,6 +431,16 @@ INSERT INTO GAME_OF_JOINS.EstadoEnvio(estado)
 SELECT DISTINCT M.ENVIO_MENSAJERIA_ESTADO
 FROM gd_esquema.Maestra M
 	WHERE M.ENVIO_MENSAJERIA_ESTADO is not null
+END
+GO
+
+CREATE PROCEDURE GAME_OF_JOINS.migrar_estado_reclamo
+AS
+BEGIN 
+INSERT INTO GAME_OF_JOINS.EstadoReclamo(estado_reclamo_id)
+SELECT DISTINCT M.RECLAMO_ESTADO
+FROM gd_esquema.Maestra M
+	WHERE M.RECLAMO_NRO is not null
 END
 GO
 
@@ -516,7 +566,7 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_local
  AS
   BEGIN
 	INSERT INTO GAME_OF_JOINS.LocalRegistrado
-	(local_nombre, local_tipo, local_descripcion)
+	(local_nombre, local_tipo_id, local_descripcion)
 	SELECT DISTINCT LOCAL_NOMBRE, LOCAL_TIPO, LOCAL_DESCRIPCION
 	FROM [GD1C2023].[gd_esquema].[Maestra]
 	WHERE LOCAL_NOMBRE IS NOT NULL
@@ -578,6 +628,7 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_direccion_usuario
 
 --EXEC GAME_OF_JOINS.migrar_cupon
 --EXEC GAME_OF_JOINS.migrar_cupon_reclamo
+EXEC GAME_OF_JOINS.migrar_local_tipo
 EXEC GAME_OF_JOINS.migrar_movilidad
 EXEC GAME_OF_JOINS.migrar_localidad
 EXEC GAME_OF_JOINS.migrar_estado_pedido
@@ -585,7 +636,7 @@ EXEC GAME_OF_JOINS.migrar_estado_envio
 --EXEC GAME_OF_JOINS.migrar_direccion_local
 --EXEC GAME_OF_JOINS.migrar_direccion_usuario
 --EXEC GAME_OF_JOINS.migrar_envio --revisar
-EXEC GAME_OF_JOINS.migrar_local
+--EXEC GAME_OF_JOINS.migrar_local
 EXEC GAME_OF_JOINS.migrar_medio_pago
 --EXEC GAME_OF_JOINS.migrar_operador_reclamo --revisar
 EXEC GAME_OF_JOINS.migrar_paquete
