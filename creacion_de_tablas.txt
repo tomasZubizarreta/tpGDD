@@ -43,7 +43,7 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'EstadoEnvio')
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Repartidor')
     DROP TABLE GAME_OF_JOINS.Repartidor;
 
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'DireccionUsuario')
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'DireccionUsuario') --NO LA TENEMOS EN EL DER
     DROP TABLE GAME_OF_JOINS.DireccionUsuario;
 
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'DireccionLocal')
@@ -69,6 +69,10 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Usuario')
 
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Localidad')
     DROP TABLE GAME_OF_JOINS.Localidad;
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Provincia') -- HACE FALTA CREARLA
+    DROP TABLE GAME_OF_JOINS.Provincia;
+
 
 ------------------------------------DROP PROCEDURES PRE MIGRACION------------------------------------
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_usuario' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
@@ -97,7 +101,7 @@ IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_cupon_reclamo' AND 
     DROP PROCEDURE GAME_OF_JOINS.migrar_cupon_reclamo;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_local' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
     DROP PROCEDURE GAME_OF_JOINS.migrar_local;
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_direccion_local' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_direccion_local' AND schema_id = SCHEMA_ID('GAME_OF_JOINS')) --LISTO
     DROP PROCEDURE GAME_OF_JOINS.migrar_direccion_local;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_producto_local' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
     DROP PROCEDURE GAME_OF_JOINS.migrar_producto_local;
@@ -109,8 +113,10 @@ IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_estado_envio' AND s
     DROP PROCEDURE GAME_OF_JOINS.migrar_estado_envio;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_estado_pedido' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
     DROP PROCEDURE GAME_OF_JOINS.migrar_estado_pedido;
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_localidad' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_localidad' AND schema_id = SCHEMA_ID('GAME_OF_JOINS')) --LISTO
     DROP PROCEDURE GAME_OF_JOINS.migrar_localidad;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_movilidad' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
+    DROP PROCEDURE GAME_OF_JOINS.migrar_movilidad;
 GO
 
 --------------------------- Creacion del schema --------------------------- 
@@ -128,6 +134,11 @@ CREATE TABLE GAME_OF_JOINS.localidad (
 	localidad nvarchar(255) null
 );
 
+CREATE TABLE GAME_OF_JOINS.movilidad (
+	movilidad_id int IDENTITY PRIMARY KEY,
+	movilidad nvarchar(255) null
+);
+
 
 CREATE TABLE GAME_OF_JOINS.Usuario(
 	usuario_dni decimal(18,0) PRIMARY KEY,
@@ -139,9 +150,10 @@ CREATE TABLE GAME_OF_JOINS.Usuario(
 	usuario_fecha_nacimiento date NULL
 );
 
-CREATE TABLE GAME_OF_JOINS.Repartidor(
+ CREATE TABLE GAME_OF_JOINS.Repartidor(
 	repartidor_dni decimal(18,0) NOT NULL PRIMARY KEY,
-	repartidor_movilidad nvarchar(50) NULL,
+	repartidor_movilidad int REFERENCES GAME_OF_JOINS.movilidad(movilidad_id),
+	repartidor_localidad_id int REFERENCES GAME_OF_JOINS.localidad(localidad_id),
 	repartidor_nombre nvarchar(255) NULL,
 	repartidor_apellido nvarchar(255) NULL,
 	repartidor_direccion nvarchar(255) NULL,
@@ -320,6 +332,16 @@ CREATE TABLE GAME_OF_JOINS.CuponReclamo(
 GO
 
 ------------------------------------------------------------------ STORED PROCEDURES PARA MIGRACION
+
+CREATE PROCEDURE GAME_OF_JOINS.migrar_movilidad
+AS
+	BEGIN
+		INSERT INTO GAME_OF_JOINS.movilidad(movilidad)
+		SELECT DISTINCT M.REPARTIDOR_TIPO_MOVILIDAD
+		FROM [GD1C2023].[gd_esquema].[Maestra] AS M
+		WHERE M.REPARTIDOR_TIPO_MOVILIDAD IS NOT NULL
+	END
+GO
 
 CREATE PROCEDURE GAME_OF_JOINS.migrar_localidad
 AS
@@ -556,6 +578,7 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_direccion_usuario
 
 --EXEC GAME_OF_JOINS.migrar_cupon
 --EXEC GAME_OF_JOINS.migrar_cupon_reclamo
+EXEC GAME_OF_JOINS.migrar_movilidad
 EXEC GAME_OF_JOINS.migrar_localidad
 EXEC GAME_OF_JOINS.migrar_estado_pedido
 EXEC GAME_OF_JOINS.migrar_estado_envio
@@ -569,7 +592,7 @@ EXEC GAME_OF_JOINS.migrar_paquete
 --EXEC GAME_OF_JOINS.migrar_pedido --revisar
 EXEC GAME_OF_JOINS.migrar_producto_local --revisar
 EXEC GAME_OF_JOINS.migrar_reclamo
-EXEC GAME_OF_JOINS.migrar_repartidor 
+--EXEC GAME_OF_JOINS.migrar_repartidor 
 EXEC GAME_OF_JOINS.migrar_servicio_mensajeria
 --EXEC GAME_OF_JOINS.migrar_tarjeta
 EXEC GAME_OF_JOINS.migrar_usuario 
