@@ -314,14 +314,17 @@ CREATE TABLE GAME_OF_JOINS.Pedido(
 	pedido_nro decimal(18,0) IDENTITY PRIMARY KEY,
 	pedido_usuario decimal(18,0) REFERENCES GAME_OF_JOINS.Usuario(usuario_dni),
 	pedido_local decimal(18,0) REFERENCES GAME_OF_JOINS.LocalRegistrado(local_id),
+	pedido_nro_envio decimal(18,0) REFERENCES GAME_OF_JOINS.Envio,
 	pedido_fecha_hora datetime2(3) NULL,
+	pedido_total_productos decimal(18,0),
+	pedido_total_cupones decimal(18,0),
+	pedido_tarifa decimal(18,0),
+	pedido_total_servicio decimal(18,2) NULL,
+	pedido_tiempo_entrega_estimada int NULL,
+	pedido_fecha_hora_entrega datetime2(3) NULL,
 	pedido_estado_id int REFERENCES GAME_OF_JOINS.EstadoPedido(estado_pedido_id),
-	pedido_observaciones nvarchar(255) NULL,
-	pedido_total decimal(18,2) NULL,
 	pedido_calificacion decimal(18,0) NULL,
-	pedido_direccion_entrega nvarchar(255) NULL,
-	pedido_localidad_entrega int REFERENCES GAME_OF_JOINS.localidad(localidad_id),
-	pedido_provincia_entrega int REFERENCES GAME_OF_JOINS.localidad(localidad_id)
+	pedido_observaciones nvarchar(255) NULL,
 );
 
 CREATE TABLE GAME_OF_JOINS.Reclamo(
@@ -673,3 +676,4 @@ EXEC GAME_OF_JOINS.migrar_medio_pago
 --EXEC GAME_OF_JOINS.migrar_repartidor 
 --EXEC GAME_OF_JOINS.migrar_servicio_mensajeria
 EXEC GAME_OF_JOINS.migrar_tarjeta
+
