@@ -28,6 +28,9 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Pedido')
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'MedioDePago')
     DROP TABLE GAME_OF_JOINS.MedioDePago;
 
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'TipoMedioDePago')
+    DROP TABLE GAME_OF_JOINS.TipoMedioDePago;
+
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Tarjeta')
     DROP TABLE GAME_OF_JOINS.Tarjeta;
 
@@ -96,6 +99,8 @@ IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_tarjeta' AND schema
     DROP PROCEDURE GAME_OF_JOINS.migrar_tarjeta;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_medio_pago' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
     DROP PROCEDURE GAME_OF_JOINS.migrar_medio_pago;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_tipo_medio_pago' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
+    DROP PROCEDURE GAME_OF_JOINS.migrar_tipo_medio_pago;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_operador_reclamo' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
     DROP PROCEDURE GAME_OF_JOINS.migrar_operador_reclamo;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_cupon' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
@@ -200,7 +205,7 @@ CREATE TABLE GAME_OF_JOINS.Usuario(
 );
 
 CREATE TABLE GAME_OF_JOINS.Tarjeta(
-	tarjeta_id decimal(18,0) IDENTITY PRIMARY KEY NOT NULL,
+	tarjeta_id int IDENTITY PRIMARY KEY NOT NULL,
 	tarjeta_nro nvarchar(100) NULL,
 	tarjeta_marca nvarchar(100) NULL
 );
@@ -239,11 +244,16 @@ CREATE TABLE GAME_OF_JOINS.Envio(
 	envio_observaciones nvarchar(255) NULL
 );
 
+CREATE TABLE GAME_OF_JOINS.TipoMedioDePago(
+	tipo_medio_pago_id int IDENTITY PRIMARY KEY,
+	tipo_medio_pago nvarchar(50) NULL,
+);
+
 CREATE TABLE GAME_OF_JOINS.MedioDePago(
-	medio_pago_id decimal(18,0) IDENTITY PRIMARY KEY,
+	medio_pago_id int IDENTITY PRIMARY KEY,
 	medio_pago_usuario decimal(18,0) REFERENCES GAME_OF_JOINS.Usuario(usuario_dni),
-	medio_pago_tipo nvarchar(50) NULL,
-	medio_pago_tarjeta decimal(18,0) REFERENCES GAME_OF_JOINS.Tarjeta(tarjeta_id)
+	tipo_medio_pago_id int REFERENCES GAME_OF_JOINS.TipoMedioDePago(tipo_medio_pago_id),
+	medio_pago_tarjeta_id int REFERENCES GAME_OF_JOINS.Tarjeta(tarjeta_id) NULL
 );
 
 CREATE TABLE GAME_OF_JOINS.LocalRegistrado(
@@ -496,19 +506,35 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_tarjeta
   BEGIN
 	INSERT INTO GAME_OF_JOINS.Tarjeta
 	(tarjeta_nro, tarjeta_marca)
-	SELECT MEDIO_PAGO_NRO_TARJETA, MARCA_TARJETA 
+	SELECT DISTINCT MEDIO_PAGO_NRO_TARJETA, MARCA_TARJETA 
 	FROM [GD1C2023].[gd_esquema].[Maestra]
+	WHERE MEDIO_PAGO_NRO_TARJETA IS NOT NULL
+	AND MEDIO_PAGO_TIPO != 'Efectivo'
   END
  GO
 
+CREATE PROCEDURE GAME_OF_JOINS.migrar_tipo_medio_pago
+ AS
+  BEGIN
+	INSERT INTO GAME_OF_JOINS.TipoMedioDePago
+	(tipo_medio_pago)
+	SELECT DISTINCT MEDIO_PAGO_TIPO
+	FROM [GD1C2023].[gd_esquema].[Maestra] AS M
+	WHERE M.MEDIO_PAGO_TIPO IS NOT NULL
+  END
+ GO
 
-CREATE PROCEDURE GAME_OF_JOINS.migrar_medio_pago
+ CREATE PROCEDURE GAME_OF_JOINS.migrar_medio_pago
  AS
   BEGIN
 	INSERT INTO GAME_OF_JOINS.MedioDePago
-	(medio_pago_tipo)
-	SELECT MEDIO_PAGO_TIPO
-	FROM [GD1C2023].[gd_esquema].[Maestra]
+	(medio_pago_usuario, tipo_medio_pago_id, medio_pago_tarjeta_id)
+	SELECT DISTINCT U.usuario_dni, (SELECT tipo_medio_pago_id FROM GAME_OF_JOINS.TipoMedioDePago WHERE tipo_medio_pago = M.MEDIO_PAGO_TIPO), 
+	CASE WHEN MEDIO_PAGO_TIPO != 'Efectivo' THEN T.tarjeta_id ELSE NULL END
+	FROM [GD1C2023].[gd_esquema].[Maestra] AS M
+	INNER JOIN GAME_OF_JOINS.Usuario U ON M.USUARIO_DNI = U.usuario_dni
+	LEFT JOIN GAME_OF_JOINS.Tarjeta T ON M.MEDIO_PAGO_NRO_TARJETA = T.tarjeta_nro
+	WHERE M.MEDIO_PAGO_TIPO IS NOT NULL
   END
  GO
 
@@ -613,8 +639,6 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_producto_local
   END
  GO
 
-
-
 CREATE PROCEDURE GAME_OF_JOINS.migrar_direccion_usuario
  AS
   BEGIN
@@ -626,24 +650,26 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_direccion_usuario
   END
  GO
 
+EXEC GAME_OF_JOINS.migrar_categoria
 --EXEC GAME_OF_JOINS.migrar_cupon
 --EXEC GAME_OF_JOINS.migrar_cupon_reclamo
-EXEC GAME_OF_JOINS.migrar_local_tipo
-EXEC GAME_OF_JOINS.migrar_movilidad
-EXEC GAME_OF_JOINS.migrar_localidad
+--EXEC GAME_OF_JOINS.migrar_local_tipo
+--EXEC GAME_OF_JOINS.migrar_movilidad
+--EXEC GAME_OF_JOINS.migrar_localidad
 EXEC GAME_OF_JOINS.migrar_estado_pedido
 EXEC GAME_OF_JOINS.migrar_estado_envio
 --EXEC GAME_OF_JOINS.migrar_direccion_local
 --EXEC GAME_OF_JOINS.migrar_direccion_usuario
 --EXEC GAME_OF_JOINS.migrar_envio --revisar
 --EXEC GAME_OF_JOINS.migrar_local
+EXEC GAME_OF_JOINS.migrar_usuario 
+EXEC GAME_OF_JOINS.migrar_tipo_medio_pago
 EXEC GAME_OF_JOINS.migrar_medio_pago
 --EXEC GAME_OF_JOINS.migrar_operador_reclamo --revisar
-EXEC GAME_OF_JOINS.migrar_paquete
+--EXEC GAME_OF_JOINS.migrar_paquete
 --EXEC GAME_OF_JOINS.migrar_pedido --revisar
-EXEC GAME_OF_JOINS.migrar_producto_local --revisar
-EXEC GAME_OF_JOINS.migrar_reclamo
+--EXEC GAME_OF_JOINS.migrar_producto_local --revisar
+--EXEC GAME_OF_JOINS.migrar_reclamo
 --EXEC GAME_OF_JOINS.migrar_repartidor 
-EXEC GAME_OF_JOINS.migrar_servicio_mensajeria
---EXEC GAME_OF_JOINS.migrar_tarjeta
-EXEC GAME_OF_JOINS.migrar_usuario 
+--EXEC GAME_OF_JOINS.migrar_servicio_mensajeria
+EXEC GAME_OF_JOINS.migrar_tarjeta
