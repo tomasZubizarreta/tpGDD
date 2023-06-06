@@ -61,9 +61,6 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'LocalRegistrado')
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'DireccionLocal')
     DROP TABLE GAME_OF_JOINS.DireccionLocal;
 
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Provincia') -- HACE FALTA CREARLA
-    DROP TABLE GAME_OF_JOINS.Provincia;
-
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'DireccionUsuario')
     DROP TABLE GAME_OF_JOINS.DireccionUsuario;
 
@@ -84,6 +81,9 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'LocalTipo')
 
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Localidad')
     DROP TABLE GAME_OF_JOINS.Localidad;
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Provincia') -- HACE FALTA CREARLA
+    DROP TABLE GAME_OF_JOINS.Provincia;
 
 ------------------------------------DROP PROCEDURES PRE MIGRACION------------------------------------
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_usuario' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
@@ -140,6 +140,8 @@ IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_local_tipo' AND sch
     DROP PROCEDURE GAME_OF_JOINS.migrar_local_tipo;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_cupon_tipo' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
     DROP PROCEDURE GAME_OF_JOINS.migrar_tipo_cupon;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_provincia' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
+    DROP PROCEDURE GAME_OF_JOINS.migrar_provincia;
 GO
 
 --------------------------- Creacion del schema --------------------------- 
@@ -151,6 +153,10 @@ CREATE SCHEMA GAME_OF_JOINS
 GO
 
 --------------------------- Creacion de tablas ---------------------------- 
+CREATE TABLE GAME_OF_JOINS.provincia (
+	provincia_id int IDENTITY(1,1) PRIMARY KEY,
+	provincia nvarchar(255) null
+);
 
 CREATE TABLE GAME_OF_JOINS.EstadoReclamo (
 	estado_reclamo_id int IDENTITY PRIMARY KEY,
@@ -260,9 +266,8 @@ CREATE TABLE GAME_OF_JOINS.DireccionLocal(
 	direccion_local_id int IDENTITY PRIMARY KEY NOT NULL,
 	direccion_local_direccion nvarchar(255) NULL,
 	direccion_local_localidad_id int REFERENCES GAME_OF_JOINS.localidad(localidad_id),
-	direccion_local_provincia nvarchar(255) NULL
+	direccion_local_provincia_id int REFERENCES GAME_OF_JOINS.Provincia(provincia_id)
 );
-
 
 CREATE TABLE GAME_OF_JOINS.LocalRegistrado(
 	local_id int IDENTITY PRIMARY KEY,
@@ -294,8 +299,8 @@ CREATE TABLE GAME_OF_JOINS.DireccionUsuario(
 	direccion_usuario_usuario decimal(18,0) REFERENCES GAME_OF_JOINS.Usuario(usuario_dni),
 	direccion_usuario_nombre nvarchar(50) NULL,
 	direccion_usuario_direccion nvarchar(255) NULL,
-	direccion_usuario_localidad int REFERENCES GAME_OF_JOINS.localidad(localidad_id),
-	direccion_usuario_provincia nvarchar(255) NULL
+	direccion_usuario_localidad int REFERENCES GAME_OF_JOINS.Localidad(localidad_id),
+	direccion_usuario_provincia_id int REFERENCES GAME_OF_JOINS.Provincia(provincia_id)
 );
 
 CREATE TABLE GAME_OF_JOINS.ServicioMensajeria(
@@ -633,7 +638,6 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_reclamo
 CREATE PROCEDURE GAME_OF_JOINS.migrar_cupon_reclamo
  AS
   BEGIN
-  SET IDENTITY_INSERT GAME_OF_JOINS.CuponReclamo ON;
 	INSERT INTO GAME_OF_JOINS.CuponReclamo
 	(cupon_nro, reclamo_nro)
 	SELECT C.cupon_nro, R.reclamo_nro
@@ -644,7 +648,6 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_cupon_reclamo
 	ON M.RECLAMO_NRO = R.reclamo_nro 
 	AND R.reclamo_usuario = C.cupon_usuario
 	WHERE CUPON_RECLAMO_NRO IS NOT NULL
-	SET IDENTITY_INSERT GAME_OF_JOINS.CuponReclamo OFF;
   END
  GO
 
@@ -652,11 +655,13 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_cupon_reclamo
  AS
   BEGIN
 	INSERT INTO GAME_OF_JOINS.DireccionLocal
-	(direccion_local_direccion, direccion_local_localidad_id, direccion_local_provincia)
-	SELECT distinct LOCAL_DIRECCION, localidad_id , LOCAL_PROVINCIA
+	(direccion_local_direccion, direccion_local_localidad_id, direccion_local_provincia_id)
+	SELECT distinct LOCAL_DIRECCION, localidad_id , P.provincia_id
 	FROM [GD1C2023].[gd_esquema].[Maestra] M
 	INNER JOIN GAME_OF_JOINS.localidad L
 	ON L.localidad = M.LOCAL_LOCALIDAD
+	INNER JOIN GAME_OF_JOINS.Provincia P
+	ON M.LOCAL_PROVINCIA = P.provincia
 	WHERE LOCAL_DIRECCION IS NOT NULL
   END
  GO
@@ -705,11 +710,12 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_direccion_usuario
  AS
   BEGIN
 	INSERT INTO GAME_OF_JOINS.DireccionUsuario
-	(direccion_usuario_usuario, direccion_usuario_nombre, direccion_usuario_direccion, direccion_usuario_localidad, direccion_usuario_provincia)
-	SELECT DISTINCT U.usuario_dni, M.DIRECCION_USUARIO_NOMBRE, M.DIRECCION_USUARIO_DIRECCION, L.localidad_id, M.DIRECCION_USUARIO_PROVINCIA 
+	(direccion_usuario_usuario, direccion_usuario_nombre, direccion_usuario_direccion, direccion_usuario_localidad, direccion_usuario_provincia_id)
+	SELECT DISTINCT U.usuario_dni, M.DIRECCION_USUARIO_NOMBRE, M.DIRECCION_USUARIO_DIRECCION, L.localidad_id, P.provincia_id 
 	FROM [GD1C2023].[gd_esquema].[Maestra] M
 	INNER JOIN GAME_OF_JOINS.Usuario U ON M.USUARIO_DNI = U.usuario_dni
 	INNER JOIN GAME_OF_JOINS.Localidad L ON M.DIRECCION_USUARIO_LOCALIDAD = L.localidad
+	INNER JOIN GAME_OF_JOINS.Provincia P ON M.DIRECCION_USUARIO_PROVINCIA = P.provincia
 	WHERE DIRECCION_USUARIO_NOMBRE IS NOT NULL
   END
  GO
@@ -752,6 +758,25 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_pedido
   END
  GO
 
+CREATE PROCEDURE GAME_OF_JOINS.migrar_provincia
+AS
+	BEGIN
+		INSERT INTO GAME_OF_JOINS.Provincia(provincia)
+		SELECT DISTINCT DIRECCION_USUARIO_PROVINCIA
+		FROM [GD1C2023].[gd_esquema].[Maestra] AS M
+		WHERE M.DIRECCION_USUARIO_PROVINCIA IS NOT NULL
+		UNION
+		SELECT DISTINCT M.ENVIO_MENSAJERIA_PROVINCIA
+		FROM [GD1C2023].[gd_esquema].[Maestra] AS M
+		WHERE M.ENVIO_MENSAJERIA_PROVINCIA IS NOT NULL
+		UNION
+		SELECT DISTINCT M.LOCAL_PROVINCIA
+		FROM[GD1C2023].[gd_esquema].[Maestra] AS M
+		WHERE M.LOCAL_PROVINCIA IS NOT NULL
+	END
+GO
+
+EXEC GAME_OF_JOINS.migrar_provincia
 EXEC GAME_OF_JOINS.migrar_paquete
 EXEC GAME_OF_JOINS.migrar_localidad
 EXEC GAME_OF_JOINS.migrar_categoria
@@ -769,10 +794,10 @@ EXEC GAME_OF_JOINS.migrar_direccion_usuario
 EXEC GAME_OF_JOINS.migrar_tipo_medio_pago
 EXEC GAME_OF_JOINS.migrar_medio_pago
 EXEC GAME_OF_JOINS.migrar_cupon
---EXEC GAME_OF_JOINS.migrar_cupon_reclamo
+EXEC GAME_OF_JOINS.migrar_reclamo --revisar
+EXEC GAME_OF_JOINS.migrar_cupon_reclamo
 --EXEC GAME_OF_JOINS.migrar_operador_reclamo --revisar
 --EXEC GAME_OF_JOINS.migrar_producto_local --revisar
---EXEC GAME_OF_JOINS.migrar_reclamo
 EXEC GAME_OF_JOINS.migrar_repartidor --OJO (INCOMPLETO)
 EXEC GAME_OF_JOINS.migrar_pedido
 --EXEC GAME_OF_JOINS.migrar_servicio_mensajeria
