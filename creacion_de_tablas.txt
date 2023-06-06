@@ -10,6 +10,9 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'CuponReclamo')
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Cupon')
     DROP TABLE GAME_OF_JOINS.Cupon;
 
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'TipoCupon')
+    DROP TABLE GAME_OF_JOINS.TipoCupon;
+
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Reclamo')
     DROP TABLE GAME_OF_JOINS.Reclamo;
 
@@ -103,6 +106,8 @@ IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_tipo_medio_pago' AN
     DROP PROCEDURE GAME_OF_JOINS.migrar_tipo_medio_pago;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_operador_reclamo' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
     DROP PROCEDURE GAME_OF_JOINS.migrar_operador_reclamo;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_tipo_cupon' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
+    DROP PROCEDURE GAME_OF_JOINS.migrar_tipo_cupon;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_cupon' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
     DROP PROCEDURE GAME_OF_JOINS.migrar_cupon;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_reclamo' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
@@ -133,6 +138,8 @@ IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_categoria' AND sche
     DROP PROCEDURE GAME_OF_JOINS.migrar_categoria;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_local_tipo' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
     DROP PROCEDURE GAME_OF_JOINS.migrar_local_tipo;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_cupon_tipo' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
+    DROP PROCEDURE GAME_OF_JOINS.migrar_tipo_cupon;
 GO
 
 --------------------------- Creacion del schema --------------------------- 
@@ -345,10 +352,15 @@ CREATE TABLE GAME_OF_JOINS.Reclamo(
 	reclamo_calificacion decimal(18,0) NULL
 );
 
+CREATE TABLE GAME_OF_JOINS.TipoCupon(
+	tipo_cupon_id int IDENTITY PRIMARY KEY,
+	tipo_cupon nvarchar(50)
+);
+
 CREATE TABLE GAME_OF_JOINS.Cupon(
 	cupon_nro decimal(18,0) IDENTITY PRIMARY KEY,
 	cupon_usuario decimal(18,0) REFERENCES GAME_OF_JOINS.Usuario(usuario_dni),
-	cupon_tipo nvarchar(50) NULL,
+	cupon_tipo_id int REFERENCES GAME_OF_JOINS.TipoCupon(tipo_cupon_id),
 	cupon_monto_descuento decimal(18,2) NULL,
 	cupon_fecha_alta datetime2(3) NULL,
 	cupon_fecha_vencimiento datetime2(3) NULL
@@ -360,12 +372,9 @@ CREATE TABLE GAME_OF_JOINS.CuponPedido(
 );
 
 CREATE TABLE GAME_OF_JOINS.CuponReclamo(
-	cupon_reclamo_nro decimal(18,0) NOT NULL PRIMARY KEY,
-	cupon_reclamo_usuario decimal(18,0) REFERENCES GAME_OF_JOINS.Usuario(usuario_dni),
-	cupon_reclamo_tipo nvarchar(50) NULL,
-	cupon_reclamo_monto decimal(18,2) NULL,
-	cupon_reclamo_fecha_alta datetime2(3) NULL,
-	cupon_reclamo_fecha_vencimiento datetime2(3) NULL
+	cupon_nro decimal(18,0) REFERENCES GAME_OF_JOINS.Cupon(cupon_nro),
+	reclamo_nro decimal(18,0) REFERENCES GAME_OF_JOINS.Reclamo(reclamo_nro),
+	PRIMARY KEY(cupon_nro,reclamo_nro)
 );
 GO
 
@@ -496,18 +505,16 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_servicio_mensajeria
   END
  GO
 
-
-
 CREATE PROCEDURE GAME_OF_JOINS.migrar_paquete
  AS
   BEGIN
 	INSERT INTO GAME_OF_JOINS.Paquete
 	(paquete_tipo, paquete_alto_max, paquete_ancho_max, paquete_largo_max, paquete_peso_max, paquete_tipo_precio)
-	SELECT PAQUETE_TIPO, PAQUETE_ALTO_MAX, PAQUETE_ANCHO_MAX, PAQUETE_LARGO_MAX, PAQUETE_PESO_MAX, PAQUETE_TIPO_PRECIO 
+	SELECT DISTINCT PAQUETE_TIPO, PAQUETE_ALTO_MAX, PAQUETE_ANCHO_MAX, PAQUETE_LARGO_MAX, PAQUETE_PESO_MAX, PAQUETE_TIPO_PRECIO 
 	FROM [GD1C2023].[gd_esquema].[Maestra]
+	WHERE PAQUETE_TIPO IS NOT NULL
   END
  GO
-
 
 CREATE PROCEDURE GAME_OF_JOINS.migrar_tarjeta
  AS
@@ -557,14 +564,58 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_operador_reclamo
   END
  GO
 
+CREATE PROCEDURE GAME_OF_JOINS.migrar_tipo_cupon
+ AS
+  BEGIN
+	INSERT INTO GAME_OF_JOINS.TipoCupon
+	(tipo_cupon)
+	SELECT DISTINCT CUPON_TIPO
+	FROM [GD1C2023].[gd_esquema].[Maestra] AS M
+	WHERE M.CUPON_NRO IS NOT NULL
+	UNION
+	SELECT DISTINCT CUPON_RECLAMO_TIPO
+	FROM [GD1C2023].[gd_esquema].[Maestra] AS M
+	WHERE M.CUPON_RECLAMO_NRO IS NOT NULL
+  END
+ GO
+-- select  * from GAME_OF_JOINS.Cupon
 CREATE PROCEDURE GAME_OF_JOINS.migrar_cupon
  AS
   BEGIN
-	INSERT INTO GAME_OF_JOINS.Cupon
-	(cupon_nro, cupon_tipo, cupon_monto_descuento, cupon_fecha_alta, cupon_fecha_vencimiento)
-	SELECT CUPON_NRO, CUPON_TIPO, CUPON_MONTO, CUPON_FECHA_ALTA, CUPON_FECHA_VENCIMIENTO
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-	WHERE CUPON_NRO IS NOT NULL
+
+  SET IDENTITY_INSERT GAME_OF_JOINS.Cupon ON;
+    
+    INSERT INTO GAME_OF_JOINS.Cupon
+    (cupon_nro, cupon_usuario, cupon_tipo_id, cupon_monto_descuento, cupon_fecha_alta, cupon_fecha_vencimiento)
+    SELECT cupon_nro, cupon_usuario, cupon_tipo_id, cupon_monto_descuento, cupon_fecha_alta, cupon_fecha_vencimiento
+    FROM (
+        SELECT CUPON_NRO, U.usuario_dni AS cupon_usuario, TC.tipo_cupon_id AS cupon_tipo_id,
+            CUPON_MONTO AS cupon_monto_descuento, CUPON_FECHA_ALTA, CUPON_FECHA_VENCIMIENTO,
+            ROW_NUMBER() OVER (PARTITION BY CUPON_NRO ORDER BY (SELECT NULL)) AS row_num
+        FROM [GD1C2023].[gd_esquema].[Maestra] M
+        INNER JOIN GAME_OF_JOINS.Usuario U ON M.USUARIO_DNI = U.usuario_dni
+        INNER JOIN GAME_OF_JOINS.TipoCupon TC ON M.CUPON_TIPO = TC.tipo_cupon
+        WHERE CUPON_NRO IS NOT NULL
+    ) AS subquery
+    WHERE row_num = 1
+    AND cupon_nro NOT IN (SELECT cupon_nro FROM GAME_OF_JOINS.Cupon);
+
+    INSERT INTO GAME_OF_JOINS.Cupon
+    (cupon_nro, cupon_usuario, cupon_tipo_id, cupon_monto_descuento, cupon_fecha_alta, cupon_fecha_vencimiento)
+    SELECT CUPON_RECLAMO_NRO, cupon_usuario, cupon_tipo_id, cupon_monto_descuento, CUPON_RECLAMO_FECHA_ALTA, CUPON_RECLAMO_FECHA_VENCIMIENTO
+    FROM (
+        SELECT CUPON_RECLAMO_NRO, U.usuario_dni AS cupon_usuario, TC.tipo_cupon_id AS cupon_tipo_id,
+            CUPON_RECLAMO_MONTO AS cupon_monto_descuento, CUPON_RECLAMO_FECHA_ALTA, CUPON_RECLAMO_FECHA_VENCIMIENTO,
+            ROW_NUMBER() OVER (PARTITION BY CUPON_RECLAMO_NRO ORDER BY (SELECT NULL)) AS row_num
+        FROM [GD1C2023].[gd_esquema].[Maestra] M
+        INNER JOIN GAME_OF_JOINS.Usuario U ON M.USUARIO_DNI = U.usuario_dni
+        INNER JOIN GAME_OF_JOINS.TipoCupon TC ON M.CUPON_RECLAMO_TIPO = TC.tipo_cupon
+        WHERE CUPON_RECLAMO_NRO IS NOT NULL
+    ) AS subquery
+    WHERE row_num = 1
+    AND CUPON_RECLAMO_NRO NOT IN (SELECT cupon_nro FROM GAME_OF_JOINS.Cupon);
+
+	SET IDENTITY_INSERT GAME_OF_JOINS.Cupon OFF;
   END
  GO
 
@@ -582,11 +633,18 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_reclamo
 CREATE PROCEDURE GAME_OF_JOINS.migrar_cupon_reclamo
  AS
   BEGIN
+  SET IDENTITY_INSERT GAME_OF_JOINS.CuponReclamo ON;
 	INSERT INTO GAME_OF_JOINS.CuponReclamo
-	(cupon_reclamo_nro, cupon_reclamo_tipo, cupon_reclamo_monto, cupon_reclamo_fecha_alta, cupon_reclamo_fecha_vencimiento)
-	SELECT CUPON_RECLAMO_NRO, CUPON_RECLAMO_TIPO, CUPON_RECLAMO_MONTO, CUPON_RECLAMO_FECHA_ALTA, CUPON_RECLAMO_FECHA_VENCIMIENTO
-	FROM [GD1C2023].[gd_esquema].[Maestra]
+	(cupon_nro, reclamo_nro)
+	SELECT C.cupon_nro, R.reclamo_nro
+	FROM [GD1C2023].[gd_esquema].[Maestra] M
+	INNER JOIN GAME_OF_JOINS.Cupon C
+	ON M.CUPON_RECLAMO_NRO = C.cupon_nro
+	INNER JOIN GAME_OF_JOINS.Reclamo R
+	ON M.RECLAMO_NRO = R.reclamo_nro 
+	AND R.reclamo_usuario = C.cupon_usuario
 	WHERE CUPON_RECLAMO_NRO IS NOT NULL
+	SET IDENTITY_INSERT GAME_OF_JOINS.CuponReclamo OFF;
   END
  GO
 
@@ -694,10 +752,10 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_pedido
   END
  GO
 
+EXEC GAME_OF_JOINS.migrar_paquete
 EXEC GAME_OF_JOINS.migrar_localidad
 EXEC GAME_OF_JOINS.migrar_categoria
---EXEC GAME_OF_JOINS.migrar_cupon
---EXEC GAME_OF_JOINS.migrar_cupon_reclamo
+EXEC GAME_OF_JOINS.migrar_tipo_cupon
 EXEC GAME_OF_JOINS.migrar_local_tipo
 EXEC GAME_OF_JOINS.migrar_movilidad
 EXEC GAME_OF_JOINS.migrar_estado_pedido
@@ -710,8 +768,9 @@ EXEC GAME_OF_JOINS.migrar_usuario
 EXEC GAME_OF_JOINS.migrar_direccion_usuario
 EXEC GAME_OF_JOINS.migrar_tipo_medio_pago
 EXEC GAME_OF_JOINS.migrar_medio_pago
+EXEC GAME_OF_JOINS.migrar_cupon
+--EXEC GAME_OF_JOINS.migrar_cupon_reclamo
 --EXEC GAME_OF_JOINS.migrar_operador_reclamo --revisar
---EXEC GAME_OF_JOINS.migrar_paquete
 --EXEC GAME_OF_JOINS.migrar_producto_local --revisar
 --EXEC GAME_OF_JOINS.migrar_reclamo
 EXEC GAME_OF_JOINS.migrar_repartidor --OJO (INCOMPLETO)
