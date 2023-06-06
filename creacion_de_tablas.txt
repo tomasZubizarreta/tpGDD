@@ -314,7 +314,8 @@ CREATE TABLE GAME_OF_JOINS.ServicioMensajeria(
 );
 
 CREATE TABLE GAME_OF_JOINS.OperadorReclamo(
-	operador_dni decimal(18,0) NOT NULL PRIMARY KEY,
+	operador_id int IDENTITY PRIMARY KEY,
+	operador_dni decimal(18,0) NOT NULL, 
 	operador_nombre nvarchar(255) NULL,
 	operador_apellido nvarchar(255) NULL,
 	operador_telefono decimal(18,0) NULL,
@@ -350,7 +351,7 @@ CREATE TABLE GAME_OF_JOINS.Reclamo(
 	reclamo_tipo nvarchar(50) NULL,
 	reclamo_descripcion nvarchar(255) NULL,
 	reclamo_fecha_hora_creacion datetime2(3) NULL,
-	reclamo_operador decimal(18,0) REFERENCES GAME_OF_JOINS.OperadorReclamo(operador_dni),
+	reclamo_operador int REFERENCES GAME_OF_JOINS.OperadorReclamo(operador_id),
 	reclamo_estado int REFERENCES GAME_OF_JOINS.EstadoReclamo(estado_reclamo_id),
 	reclamo_solucion nvarchar(255) NULL,
 	reclamo_fecha_hora_solucion datetime2(3) NULL,
@@ -563,7 +564,7 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_operador_reclamo
   BEGIN
 	INSERT INTO GAME_OF_JOINS.OperadorReclamo
 	(operador_dni, operador_nombre, operador_apellido, operador_telefono, operador_direccion, operador_mail, operador_fecha_nacimiento)
-	SELECT OPERADOR_RECLAMO_DNI, OPERADOR_RECLAMO_NOMBRE, OPERADOR_RECLAMO_APELLIDO, OPERADOR_RECLAMO_TELEFONO, OPERADOR_RECLAMO_DIRECCION, OPERADOR_RECLAMO_MAIL, OPERADOR_RECLAMO_FECHA_NAC
+	SELECT DISTINCT OPERADOR_RECLAMO_DNI, OPERADOR_RECLAMO_NOMBRE, OPERADOR_RECLAMO_APELLIDO, OPERADOR_RECLAMO_TELEFONO, OPERADOR_RECLAMO_DIRECCION, OPERADOR_RECLAMO_MAIL, OPERADOR_RECLAMO_FECHA_NAC
 	FROM [GD1C2023].[gd_esquema].[Maestra]
 	WHERE OPERADOR_RECLAMO_DNI IS NOT NULL
   END
@@ -794,9 +795,9 @@ EXEC GAME_OF_JOINS.migrar_direccion_usuario
 EXEC GAME_OF_JOINS.migrar_tipo_medio_pago
 EXEC GAME_OF_JOINS.migrar_medio_pago
 EXEC GAME_OF_JOINS.migrar_cupon
+EXEC GAME_OF_JOINS.migrar_operador_reclamo
 EXEC GAME_OF_JOINS.migrar_reclamo --revisar
 EXEC GAME_OF_JOINS.migrar_cupon_reclamo
---EXEC GAME_OF_JOINS.migrar_operador_reclamo --revisar
 --EXEC GAME_OF_JOINS.migrar_producto_local --revisar
 EXEC GAME_OF_JOINS.migrar_repartidor
 EXEC GAME_OF_JOINS.migrar_pedido
