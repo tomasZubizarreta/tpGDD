@@ -447,11 +447,11 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_usuario
 CREATE PROCEDURE GAME_OF_JOINS.migrar_repartidor
  AS
   BEGIN
-	INSERT INTO GAME_OF_JOINS.Movilidad values('motocicleta'); --AGREGO PARA QUE FUNCIONE PEDIDO
 	INSERT INTO GAME_OF_JOINS.Repartidor 
-	(repartidor_dni, repartidor_nombre, repartidor_apellido, repartidor_telefono, repartidor_mail, repartidor_movilidad, repartidor_fecha_nacimiento)
-	SELECT distinct REPARTIDOR_DNI, REPARTIDOR_NOMBRE, REPARTIDOR_APELLIDO, REPARTIDOR_TELEFONO, REPARTIDOR_EMAIL,1 /*REPARTIDOR_TIPO_MOVILIDAD*/, REPARTIDOR_FECHA_NAC
-	FROM [GD1C2023].[gd_esquema].[Maestra]
+	(repartidor_dni, repartidor_nombre, repartidor_apellido,repartidor_direccion, repartidor_telefono, repartidor_mail, repartidor_movilidad, repartidor_fecha_nacimiento)
+	SELECT DISTINCT REPARTIDOR_DNI, REPARTIDOR_NOMBRE, REPARTIDOR_APELLIDO, REPARTIDOR_DIRECION, REPARTIDOR_TELEFONO, REPARTIDOR_EMAIL, m.movilidad_id, REPARTIDOR_FECHA_NAC
+	FROM [GD1C2023].[gd_esquema].[Maestra] MA
+	INNER JOIN GAME_OF_JOINS.Movilidad M on M.movilidad = MA.REPARTIDOR_TIPO_MOVILIDAD
 	WHERE (REPARTIDOR_DNI is not null and REPARTIDOR_NOMBRE is not null and REPARTIDOR_APELLIDO is not null and REPARTIDOR_TELEFONO is not null and REPARTIDOR_EMAIL is not null and REPARTIDOR_TIPO_MOVILIDAD is not null and REPARTIDOR_FECHA_NAC is not null)
   END
  GO
@@ -583,7 +583,7 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_tipo_cupon
 	WHERE M.CUPON_RECLAMO_NRO IS NOT NULL
   END
  GO
--- select  * from GAME_OF_JOINS.Cupon
+
 CREATE PROCEDURE GAME_OF_JOINS.migrar_cupon
  AS
   BEGIN
@@ -798,7 +798,7 @@ EXEC GAME_OF_JOINS.migrar_reclamo --revisar
 EXEC GAME_OF_JOINS.migrar_cupon_reclamo
 --EXEC GAME_OF_JOINS.migrar_operador_reclamo --revisar
 --EXEC GAME_OF_JOINS.migrar_producto_local --revisar
-EXEC GAME_OF_JOINS.migrar_repartidor --OJO (INCOMPLETO)
+EXEC GAME_OF_JOINS.migrar_repartidor
 EXEC GAME_OF_JOINS.migrar_pedido
 --EXEC GAME_OF_JOINS.migrar_servicio_mensajeria
 EXEC GAME_OF_JOINS.migrar_tarjeta
