@@ -676,10 +676,11 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_producto_local
  AS
   BEGIN
 	INSERT INTO GAME_OF_JOINS.ProductoLocal
-	(producto_codigo, producto_nombre, producto_descripcion, producto_cantidad, producto_precio_unitario)
-	SELECT DISTINCT PRODUCTO_LOCAL_CODIGO, PRODUCTO_LOCAL_NOMBRE, PRODUCTO_LOCAL_DESCRIPCION, PRODUCTO_CANTIDAD, PRODUCTO_LOCAL_PRECIO
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-	WHERE PRODUCTO_LOCAL_CODIGO IS NOT NULL
+	(producto_codigo, producto_nombre, producto_descripcion, producto_local, producto_cantidad, producto_precio_unitario)
+	SELECT DISTINCT PRODUCTO_LOCAL_CODIGO, PRODUCTO_LOCAL_NOMBRE, PRODUCTO_LOCAL_DESCRIPCION, l.local_id, PRODUCTO_CANTIDAD, PRODUCTO_LOCAL_PRECIO
+	FROM [GD1C2023].[gd_esquema].[Maestra] a 
+	inner join GAME_OF_JOINS.LocalRegistrado l on l.local_nombre = a.LOCAL_NOMBRE
+	WHERE PRODUCTO_LOCAL_CODIGO IS NOT NULL and PRODUCTO_LOCAL_NOMBRE is not null and PRODUCTO_LOCAL_DESCRIPCION is not null and PRODUCTO_CANTIDAD is not null and PRODUCTO_LOCAL_PRECIO is not null
   END
  GO
 
