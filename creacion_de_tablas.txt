@@ -1,6 +1,10 @@
 USE GD1C2023
 GO
 
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'ServicioMensajeria')
+    DROP TABLE GAME_OF_JOINS.ServicioMensajeria;
+
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'CuponPedido')
     DROP TABLE GAME_OF_JOINS.CuponPedido;
 
@@ -22,9 +26,6 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'OperadorReclamo')
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Paquete')
     DROP TABLE GAME_OF_JOINS.Paquete;
 
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'ServicioMensajeria')
-    DROP TABLE GAME_OF_JOINS.ServicioMensajeria;
-
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Pedido')
     DROP TABLE GAME_OF_JOINS.Pedido;
 
@@ -36,9 +37,6 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'TipoMedioDePago')
 
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Tarjeta')
     DROP TABLE GAME_OF_JOINS.Tarjeta;
-
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Envio')
-    DROP TABLE GAME_OF_JOINS.Envio;
 
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Repartidor')
     DROP TABLE GAME_OF_JOINS.Repartidor;
@@ -82,7 +80,7 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'LocalTipo')
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Localidad')
     DROP TABLE GAME_OF_JOINS.Localidad;
 
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Provincia') -- HACE FALTA CREARLA
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Provincia')
     DROP TABLE GAME_OF_JOINS.Provincia;
 
 ------------------------------------DROP PROCEDURES PRE MIGRACION------------------------------------
@@ -233,23 +231,6 @@ CREATE TABLE GAME_OF_JOINS.Paquete(
 	paquete_tipo_precio decimal(18,2) NULL
 );
 
-CREATE TABLE GAME_OF_JOINS.Envio(
-	envio_nro decimal(18,0) IDENTITY PRIMARY KEY,
-	envio_repartidor decimal(18,0) REFERENCES GAME_OF_JOINS.Repartidor(repartidor_dni),
-	envio_fecha datetime2(3) NULL,
-	envio_estado_id int REFERENCES GAME_OF_JOINS.EstadoEnvio(estado_envio_id),
-	envio_direccion_origen nvarchar(255) NULL,
-	envio_direccion_destino nvarchar(255) NULL,
-	envio_localidad int REFERENCES GAME_OF_JOINS.localidad(localidad_id),
-	envio_provincia nvarchar(255) NULL,
-	envio_distancia decimal(18,2) NULL,
-	envio_tiempo_estimado decimal(18,2) NULL,
-	envio_precio decimal(18,2) NULL,
-	envio_propina decimal(18,2) NULL,
-	envio_calificacion decimal(18,0) NULL,
-	envio_observaciones nvarchar(255) NULL
-);
-
 CREATE TABLE GAME_OF_JOINS.TipoMedioDePago(
 	tipo_medio_pago_id int IDENTITY PRIMARY KEY,
 	tipo_medio_pago nvarchar(50) NULL,
@@ -261,6 +242,31 @@ CREATE TABLE GAME_OF_JOINS.MedioDePago(
 	tipo_medio_pago_id int REFERENCES GAME_OF_JOINS.TipoMedioDePago(tipo_medio_pago_id),
 	medio_pago_tarjeta_id int REFERENCES GAME_OF_JOINS.Tarjeta(tarjeta_id) NULL
 );
+
+CREATE TABLE GAME_OF_JOINS.ServicioMensajeria(
+	servicio_mensajeria_nro int IDENTITY PRIMARY KEY,
+	servicio_mensajeria_usuario decimal(18,0) REFERENCES GAME_OF_JOINS.Usuario(usuario_dni),
+	servicio_mensajeria_repartidor decimal(18,0) REFERENCES GAME_OF_JOINS.Repartidor(repartidor_dni),
+	servicio_mensajeria_fecha_solicitud datetime2(3) NULL,
+	servicio_mensajeria_fecha_finalizacion datetime2(3),
+	servicio_mensajeria_estado_id int REFERENCES GAME_OF_JOINS.EstadoEnvio(estado_envio_id),
+	servicio_mensajeria_direccion_origen nvarchar(255) NULL,
+	servicio_mensajeria_direccion_destino nvarchar(255) NULL,
+	servicio_mensajeria_localidad int REFERENCES GAME_OF_JOINS.localidad(localidad_id),
+	servicio_mensajeria_provincia int REFERENCES GAME_OF_JOINS.Provincia(provincia_id),
+	servicio_mensajeria_distancia decimal(18,2) NULL,
+	servicio_mensajeria_tiempo_estimado decimal(18,2) NULL,
+	servicio_mensajeria_paquete int REFERENCES GAME_OF_JOINS.Paquete(paquete_id),
+	servicio_mensajeria_valor_asegurado decimal(18,2),
+	servicio_mensajeria_valor_seguro decimal(18,2),
+	servicio_mensajeria_precio decimal(18,2) NULL,
+	servicio_mensajeria_propina decimal(18,2) NULL,
+	servicio_mensajeria_total decimal(18,2) NULL,
+	servicio_mensajeria_medio_pago int REFERENCES GAME_OF_JOINS.MedioDePago(medio_pago_id),
+	servicio_mensajeria_calificacion decimal(18,0) NULL,
+	servicio_mensajeria_observaciones nvarchar(255) NULL
+);
+
 
 CREATE TABLE GAME_OF_JOINS.DireccionLocal(
 	direccion_local_id int IDENTITY PRIMARY KEY NOT NULL,
@@ -301,16 +307,6 @@ CREATE TABLE GAME_OF_JOINS.DireccionUsuario(
 	direccion_usuario_direccion nvarchar(255) NULL,
 	direccion_usuario_localidad int REFERENCES GAME_OF_JOINS.Localidad(localidad_id),
 	direccion_usuario_provincia_id int REFERENCES GAME_OF_JOINS.Provincia(provincia_id)
-);
-
-CREATE TABLE GAME_OF_JOINS.ServicioMensajeria(
-	servicio_mensajeria_nro decimal(18,0) NOT NULL PRIMARY KEY,
-	servicio_mensajeria_envio decimal(18,0) REFERENCES GAME_OF_JOINS.Envio(envio_nro),
-	servicio_mensajeria_fecha_solicitud datetime2(3),
-	servicio_mensajeria_fecha_finalizacion datetime2(3),
-	servicio_mensajeria_valor_asegurado decimal(18,2),
-	servicio_mensajeria_valor_seguro decimal(18,2),
-	servicio_mensajeria_total decimal(18,2)
 );
 
 CREATE TABLE GAME_OF_JOINS.OperadorReclamo(
@@ -386,7 +382,7 @@ GO
 
 ------------------------------------------------------------------ STORED PROCEDURES PARA MIGRACION
 
-CREATE PROCEDURE GAME_OF_JOINS.migrar_categoria --MOMENTANEO
+CREATE PROCEDURE GAME_OF_JOINS.migrar_categoria
 AS
 	BEGIN
 		INSERT INTO GAME_OF_JOINS.Categoria(categoria)
@@ -470,7 +466,7 @@ GO
 CREATE PROCEDURE GAME_OF_JOINS.migrar_estado_reclamo
 AS
 	BEGIN 
-		INSERT INTO GAME_OF_JOINS.EstadoReclamo(estado_reclamo_id)
+		INSERT INTO GAME_OF_JOINS.EstadoReclamo(estado)
 		SELECT DISTINCT M.RECLAMO_ESTADO
 		FROM gd_esquema.Maestra M
 			WHERE M.RECLAMO_NRO is not null
@@ -486,30 +482,6 @@ AS
 			WHERE M.PEDIDO_ESTADO is not null
 	END
 GO
-
-/*
-CREATE PROCEDURE GAME_OF_JOINS.migrar_envio
- AS
-  BEGIN
-	INSERT INTO GAME_OF_JOINS.Envio 
-	(envio_nro, envio_fecha, envio_estado, envio_precio, envio_direccion_origen, envio_direccion_destino, envio_localidad, envio_provincia, envio_distancia, envio_propina, envio_calificacion, envio_observaciones)
-	SELECT ENVIO_MENSAJERIA_NRO, ENVIO_MENSAJERIA_FECHA, ENVIO_MENSAJERIA_ESTADO, ENVIO_MENSAJERIA_PRECIO_ENVIO, ENVIO_MENSAJERIA_DIR_ORIG, ENVIO_MENSAJERIA_DIR_DEST ENVIO_MENSAJERIA_LOCALIDAD, ENVIO_MENSAJERIA_PROVINCIA, ENVIO_MENSAJERIA_KM, ENVIO_MENSAJERIA_PROPINA, ENVIO_MENSAJERIA_CALIFICACION, ENVIO_MENSAJERIA_OBSERV
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-  END
- GO
- */
-
-
-CREATE PROCEDURE GAME_OF_JOINS.migrar_servicio_mensajeria
- AS
-  BEGIN
-	INSERT INTO GAME_OF_JOINS.ServicioMensajeria
-	(servicio_mensajeria_nro, servicio_mensajeria_fecha_solicitud, servicio_mensajeria_fecha_finalizacion, servicio_mensajeria_valor_asegurado, servicio_mensajeria_valor_seguro, servicio_mensajeria_total)
-	SELECT ENVIO_MENSAJERIA_NRO,ENVIO_MENSAJERIA_FECHA, ENVIO_MENSAJERIA_FECHA_ENTREGA, ENVIO_MENSAJERIA_VALOR_ASEGURADO, ENVIO_MENSAJERIA_PRECIO_SEGURO, ENVIO_MENSAJERIA_TOTAL
-	FROM [GD1C2023].[gd_esquema].[Maestra]
-	WHERE ENVIO_MENSAJERIA_NRO is not null
-  END
- GO
 
 CREATE PROCEDURE GAME_OF_JOINS.migrar_paquete
  AS
@@ -629,9 +601,13 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_reclamo
  AS
   BEGIN
 	INSERT INTO GAME_OF_JOINS.Reclamo
-	(reclamo_nro, reclamo_tipo, reclamo_descripcion, reclamo_fecha_hora_creacion, reclamo_solucion, reclamo_fecha_hora_solucion, reclamo_calificacion)
-	SELECT RECLAMO_NRO, RECLAMO_TIPO, RECLAMO_DESCRIPCION, RECLAMO_FECHA, RECLAMO_SOLUCION, RECLAMO_FECHA_SOLUCION, RECLAMO_CALIFICACION
-	FROM [GD1C2023].[gd_esquema].[Maestra]
+	(reclamo_nro, reclamo_pedido, reclamo_usuario, reclamo_tipo, reclamo_descripcion, reclamo_fecha_hora_creacion, /*reclamo_operador,*/ reclamo_estado, reclamo_solucion, reclamo_fecha_hora_solucion, reclamo_calificacion)
+	SELECT DISTINCT RECLAMO_NRO, p.pedido_nro, u.usuario_dni, RECLAMO_TIPO, RECLAMO_DESCRIPCION, RECLAMO_FECHA, /*o.operador_dni,*/ e.estado_reclamo_id, RECLAMO_SOLUCION, RECLAMO_FECHA_SOLUCION, RECLAMO_CALIFICACION
+	FROM [GD1C2023].[gd_esquema].[Maestra] a
+	inner join GAME_OF_JOINS.Pedido p on p.pedido_nro = a.PEDIDO_NRO
+	inner join GAME_OF_JOINS.Usuario u on u.usuario_dni = a.USUARIO_DNI
+	inner join GAME_OF_JOINS.OperadorReclamo o on o.operador_dni = a.OPERADOR_RECLAMO_DNI
+	inner join GAME_OF_JOINS.EstadoReclamo e on e.estado = a.RECLAMO_ESTADO
 	WHERE RECLAMO_NRO IS NOT NULL
   END
  GO
@@ -701,7 +677,7 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_producto_local
   BEGIN
 	INSERT INTO GAME_OF_JOINS.ProductoLocal
 	(producto_codigo, producto_nombre, producto_descripcion, producto_cantidad, producto_precio_unitario)
-	SELECT PRODUCTO_LOCAL_CODIGO, PRODUCTO_LOCAL_NOMBRE, PRODUCTO_LOCAL_DESCRIPCION, PRODUCTO_CANTIDAD, PRODUCTO_LOCAL_PRECIO
+	SELECT DISTINCT PRODUCTO_LOCAL_CODIGO, PRODUCTO_LOCAL_NOMBRE, PRODUCTO_LOCAL_DESCRIPCION, PRODUCTO_CANTIDAD, PRODUCTO_LOCAL_PRECIO
 	FROM [GD1C2023].[gd_esquema].[Maestra]
 	WHERE PRODUCTO_LOCAL_CODIGO IS NOT NULL
   END
@@ -777,6 +753,49 @@ AS
 	END
 GO
 
+CREATE PROCEDURE GAME_OF_JOINS.migrar_servicio_mensajeria
+ AS
+  BEGIN
+	SET IDENTITY_INSERT GAME_OF_JOINS.ServicioMensajeria ON;
+	INSERT INTO GAME_OF_JOINS.ServicioMensajeria
+	(servicio_mensajeria_nro,
+	servicio_mensajeria_usuario,
+	servicio_mensajeria_repartidor,
+	servicio_mensajeria_fecha_solicitud,
+	servicio_mensajeria_fecha_finalizacion,
+	servicio_mensajeria_estado_id,
+	servicio_mensajeria_direccion_origen,
+	servicio_mensajeria_direccion_destino,
+	servicio_mensajeria_localidad,
+	servicio_mensajeria_provincia,
+	servicio_mensajeria_distancia,
+	servicio_mensajeria_tiempo_estimado,
+	servicio_mensajeria_paquete,
+	servicio_mensajeria_valor_asegurado,
+	servicio_mensajeria_valor_seguro,
+	servicio_mensajeria_precio,
+	servicio_mensajeria_propina,
+	servicio_mensajeria_total,
+	servicio_mensajeria_medio_pago,
+	servicio_mensajeria_calificacion,
+	servicio_mensajeria_observaciones)
+	SELECT ENVIO_MENSAJERIA_NRO, U.usuario_dni, R.repartidor_dni, ENVIO_MENSAJERIA_FECHA, ENVIO_MENSAJERIA_FECHA_ENTREGA, EE.estado_envio_id, ENVIO_MENSAJERIA_DIR_ORIG, ENVIO_MENSAJERIA_DIR_DEST, 
+	L.localidad_id, PR.provincia_id, ENVIO_MENSAJERIA_KM, ENVIO_MENSAJERIA_TIEMPO_ESTIMADO, P.paquete_id, ENVIO_MENSAJERIA_VALOR_ASEGURADO, ENVIO_MENSAJERIA_PRECIO_SEGURO, ENVIO_MENSAJERIA_PRECIO_ENVIO, ENVIO_MENSAJERIA_PROPINA,
+	ENVIO_MENSAJERIA_TOTAL, MP.medio_pago_id, ENVIO_MENSAJERIA_CALIFICACION, ENVIO_MENSAJERIA_OBSERV
+	FROM [GD1C2023].[gd_esquema].[Maestra] M
+	INNER JOIN GAME_OF_JOINS.Usuario U ON U.usuario_dni = M.USUARIO_DNI
+	INNER JOIN GAME_OF_JOINS.Repartidor R ON R.repartidor_dni = M.REPARTIDOR_DNI
+	INNER JOIN GAME_OF_JOINS.Paquete P ON P.paquete_tipo = M.PAQUETE_TIPO AND P.paquete_tipo_precio = M.PAQUETE_TIPO_PRECIO
+	INNER JOIN GAME_OF_JOINS.Localidad L ON L.localidad = M.ENVIO_MENSAJERIA_LOCALIDAD
+	INNER JOIN GAME_OF_JOINS.provincia PR ON PR.provincia = M.ENVIO_MENSAJERIA_PROVINCIA
+	INNER JOIN GAME_OF_JOINS.EstadoEnvio EE ON EE.estado = M.ENVIO_MENSAJERIA_ESTADO
+	INNER JOIN GAME_OF_JOINS.TipoMedioDePago TMP ON TMP.tipo_medio_pago = M.MEDIO_PAGO_TIPO
+	INNER JOIN GAME_OF_JOINS.MedioDePago MP ON MP.medio_pago_usuario = U.usuario_dni AND MP.tipo_medio_pago_id = TMP.tipo_medio_pago_id --( (MP.tipo_medio_pago_id = TMP.tipo_medio_pago_id AND M.MEDIO_PAGO_NRO_TARJETA IS NULL)
+	WHERE ENVIO_MENSAJERIA_NRO is not null
+	SET IDENTITY_INSERT GAME_OF_JOINS.ServicioMensajeria OFF;
+  END
+ GO
+
 EXEC GAME_OF_JOINS.migrar_provincia
 EXEC GAME_OF_JOINS.migrar_paquete
 EXEC GAME_OF_JOINS.migrar_localidad
@@ -786,20 +805,20 @@ EXEC GAME_OF_JOINS.migrar_local_tipo
 EXEC GAME_OF_JOINS.migrar_movilidad
 EXEC GAME_OF_JOINS.migrar_estado_pedido
 EXEC GAME_OF_JOINS.migrar_estado_envio
---EXEC GAME_OF_JOINS.migrar_envio --revisar
+EXEC GAME_OF_JOINS.migrar_estado_reclamo
 EXEC GAME_OF_JOINS.migrar_direccion_local
 EXEC GAME_OF_JOINS.migrar_local
 EXEC GAME_OF_JOINS.migrar_atencion_local
+EXEC GAME_OF_JOINS.migrar_tarjeta
 EXEC GAME_OF_JOINS.migrar_usuario 
 EXEC GAME_OF_JOINS.migrar_direccion_usuario
 EXEC GAME_OF_JOINS.migrar_tipo_medio_pago
 EXEC GAME_OF_JOINS.migrar_medio_pago
 EXEC GAME_OF_JOINS.migrar_cupon
 EXEC GAME_OF_JOINS.migrar_operador_reclamo
-EXEC GAME_OF_JOINS.migrar_reclamo --revisar
-EXEC GAME_OF_JOINS.migrar_cupon_reclamo
---EXEC GAME_OF_JOINS.migrar_producto_local --revisar
+EXEC GAME_OF_JOINS.migrar_producto_local
 EXEC GAME_OF_JOINS.migrar_repartidor
 EXEC GAME_OF_JOINS.migrar_pedido
---EXEC GAME_OF_JOINS.migrar_servicio_mensajeria
-EXEC GAME_OF_JOINS.migrar_tarjeta
+EXEC GAME_OF_JOINS.migrar_reclamo 
+EXEC GAME_OF_JOINS.migrar_cupon_reclamo
+EXEC GAME_OF_JOINS.migrar_servicio_mensajeria
