@@ -183,7 +183,7 @@ CREATE TABLE GAME_OF_JOINS.Movilidad (
 
 CREATE TABLE GAME_OF_JOINS.LocalTipo (
 	local_tipo_id int IDENTITY PRIMARY KEY,
-	local_tipo nvarchar(50) NULL
+	local_tipo nvarchar(40) NULL
 );
 
 CREATE TABLE GAME_OF_JOINS.Categoria (
@@ -386,7 +386,7 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_categoria
 AS
 	BEGIN
 		INSERT INTO GAME_OF_JOINS.Categoria(categoria)
-		SELECT TOP 1 'CATEGORIA'
+		SELECT TOP 1 'CATEGORIA1'
 		FROM [GD1C2023].[gd_esquema].[Maestra]
 	END
 GO
