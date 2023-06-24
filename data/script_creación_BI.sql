@@ -174,17 +174,17 @@ CREATE TABLE GAME_OF_JOINS.BI_H_Reclamo (
 );
 
 CREATE TABLE GAME_OF_JOINS.BI_D_Localidad(
-	localidad_id int IDENTITY PRIMARY KEY,
+	localidad_id int PRIMARY KEY,
 	localidad nvarchar(255) null
 );
 
 CREATE TABLE GAME_OF_JOINS.BI_D_Provincia(
-	provincia_id int IDENTITY PRIMARY KEY,
+	provincia_id int PRIMARY KEY,
 	provincia nvarchar(255) null
 )
 
 CREATE TABLE GAME_OF_JOINS.BI_D_EstadoPedido (
-    estado_pedido_id int IDENTITY(1,1) PRIMARY KEY not null,
+    estado_pedido_id int PRIMARY KEY not null,
 	estado nvarchar(50) null
 );
 
@@ -205,20 +205,33 @@ CREATE TABLE GAME_OF_JOINS.BI_D_Repartidor(
 );
 
 CREATE TABLE GAME_OF_JOINS.BI_D_TipoMedioDePago(
-	tipo_medio_pago_id int IDENTITY(1,1) PRIMARY KEY,
+	tipo_medio_pago_id int PRIMARY KEY,
 	tipo_medio_pago nvarchar(50) NULL
 );
 
 CREATE TABLE GAME_OF_JOINS.BI_H_Pedido (
-	pedido_nro decimal(18,0) IDENTITY PRIMARY KEY,
-	pedido_usuario_dni decimal(18,0) REFERENCES GAME_OF_JOINS.BI_D_Usuario(usuario_dni),
-	pedido_local_id int REFERENCES GAME_OF_JOINS.BI_D_Local(local_id),
-	pedido_repartidor_dni decimal(18,0) REFERENCES GAME_OF_JOINS.BI_D_Repartidor(repartidor_dni), 
-	pedido_estado_id int REFERENCES GAME_OF_JOINS.BI_D_EstadoPedido(estado_pedido_id),
-	pedido_medio_pago_id int REFERENCES GAME_OF_JOINS.BI_D_TipoMedioDePago(tipo_medio_pago_id),
-	pedido_tiempo int not null REFERENCES GAME_OF_JOINS.BI_D_Tiempo(tiempo_id),
+	pedido_nro decimal(18,0) not null,
+	pedido_usuario_dni decimal(18,0) not null REFERENCES GAME_OF_JOINS.BI_D_Usuario(usuario_dni),
+	pedido_local_id int not null REFERENCES GAME_OF_JOINS.BI_D_Local(local_id),
+	pedido_repartidor_dni decimal(18,0) not null REFERENCES GAME_OF_JOINS.BI_D_Repartidor(repartidor_dni), 
+	pedido_estado_id int not null REFERENCES GAME_OF_JOINS.BI_D_EstadoPedido(estado_pedido_id),
+	pedido_medio_pago_id int not null REFERENCES GAME_OF_JOINS.BI_D_TipoMedioDePago(tipo_medio_pago_id),
+	pedido_tiempo_id int not null REFERENCES GAME_OF_JOINS.BI_D_Tiempo(tiempo_id),
 	pedido_dia_semana_id int not null REFERENCES GAME_OF_JOINS.BI_D_Dias(dia_id),
-	pedido_rango_horario int not null REFERENCES GAME_OF_JOINS.BI_D_RangoHorario(rango_horario_id)
+	pedido_rango_horario_id int not null REFERENCES GAME_OF_JOINS.BI_D_RangoHorario(rango_horario_id)
+);
+
+ALTER TABLE GAME_OF_JOINS.BI_H_Pedido
+ADD CONSTRAINT PK_BI_H_Pedido PRIMARY KEY 
+(	
+	pedido_nro,
+	pedido_usuario_dni,
+	pedido_local_id,
+	pedido_repartidor_id,
+	pedido_medio_pago_id,
+	pedido_tiempo_id,
+	pedido_dia_semana_id,
+	pedido_rango_horario_id
 );
 
 ALTER TABLE GAME_OF_JOINS.BI_H_Reclamo
@@ -404,17 +417,17 @@ INSERT INTO GAME_OF_JOINS.BI_D_Provincia(provincia_id, provincia)
 INSERT INTO GAME_OF_JOINS.BI_D_EstadoPedido (estado_pedido_id, estado)
 	SELECT E.estado_pedido_id, E.estado FROM GAME_OF_JOINS.EstadoPedido E
 
-INSERT INTO GAME_OF_JOINS.BI_D_Usuario (usuario_dni/*, usuario_rango_etario*/)
-	SELECT usuario_dni
-	FROM GAME_OF_JOINS.Usuario --U
---	JOIN GAME_OF_JOINS.BI_D_RangoEtario RE ON RE.rango_etario_id = GAME_OF_JOINS.GetRangoEtario(U.usuario_fecha_nacimiento)
+INSERT INTO GAME_OF_JOINS.BI_D_Usuario (usuario_dni, usuario_rango_etario)
+	SELECT usuario_dni, RE.rango_etario_id
+	FROM GAME_OF_JOINS.Usuario U
+	JOIN GAME_OF_JOINS.BI_D_RangoEtario RE ON RE.rango_etario_id = GAME_OF_JOINS.GetRangoEtario(U.usuario_fecha_nacimiento)
 
 INSERT INTO GAME_OF_JOINS.BI_D_Movilidad (movilidad_id, movilidad)
 	SELECT movilidad_id, movilidad FROM GAME_OF_JOINS.Movilidad
 
-INSERT INTO GAME_OF_JOINS.BI_D_Repartidor (repartidor_dni, repartidor_movilidad/*, repartidor_rango_etario*/)
-	SELECT repartidor_dni, repartidor_movilidad FROM GAME_OF_JOINS.Repartidor --R
---	JOIN GAME_OF_JOINS.BI_D_RangoEtario RE ON RE.rango_etario_id = GAME_OF_JOINS.GetRangoEtario(R.repartidor_fecha_nacimiento)
+INSERT INTO GAME_OF_JOINS.BI_D_Repartidor (repartidor_dni, repartidor_movilidad, repartidor_rango_etario)
+	SELECT repartidor_dni, repartidor_movilidad, RE.rango_etario_id FROM GAME_OF_JOINS.Repartidor R
+	JOIN GAME_OF_JOINS.BI_D_RangoEtario RE ON RE.rango_etario_id = GAME_OF_JOINS.GetRangoEtario(R.repartidor_fecha_nacimiento)
 
 INSERT INTO GAME_OF_JOINS.BI_D_TipoMedioDePago (tipo_medio_pago_id, tipo_medio_pago)
 	SELECT tipo_medio_pago_id, tipo_medio_pago FROM GAME_OF_JOINS.TipoMedioDePago
