@@ -43,7 +43,10 @@ IF EXISTS (SELECT 1 FROM sys.all_views where name = 'BI_V_TIEMPO_RESOLUCION_RECL
 	DROP VIEW GAME_OF_JOINS.BI_V_TIEMPO_RESOLUCION_RECLAMOS
 
 IF EXISTS (SELECT 1 FROM sys.all_views where name = 'BI_V_MONTO_MENSUAL_CUPONES')
-	DROP VIEW GAME_OF_JOINS.BI_V_MONTO_MENSUAL_CUPONES	
+	DROP VIEW GAME_OF_JOINS.BI_V_MONTO_MENSUAL_CUPONES
+
+IF EXISTS (SELECT 1 FROM sys.all_views where name = 'BI_V_CUPONES_USUARIO')
+	DROP VIEW GAME_OF_JOINS.BI_V_CUPONES_USUARIO		
 	
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_H_Pedido')
     DROP TABLE GAME_OF_JOINS.BI_H_Pedido;
@@ -219,10 +222,11 @@ CREATE TABLE GAME_OF_JOINS.BI_H_Pedido (
 	pedido_local_id int not null REFERENCES GAME_OF_JOINS.BI_D_Local(local_id),
 	pedido_repartidor_dni decimal(18,0) not null REFERENCES GAME_OF_JOINS.BI_D_Repartidor(repartidor_dni), 
 	pedido_estado_id int not null REFERENCES GAME_OF_JOINS.BI_D_EstadoPedido(estado_pedido_id),
-	pedido_medio_pago_id int not null REFERENCES GAME_OF_JOINS.BI_D_TipoMedioDePago(tipo_medio_pago_id),
+	pedido_tipo_medio_pago_id int not null REFERENCES GAME_OF_JOINS.BI_D_TipoMedioDePago(tipo_medio_pago_id),
 	pedido_tiempo_id int not null REFERENCES GAME_OF_JOINS.BI_D_Tiempo(tiempo_id),
 	pedido_dia_semana_id int not null REFERENCES GAME_OF_JOINS.BI_D_Dias(dia_id),
-	pedido_rango_horario_id int not null REFERENCES GAME_OF_JOINS.BI_D_RangoHorario(rango_horario_id)
+	pedido_rango_horario_id int not null REFERENCES GAME_OF_JOINS.BI_D_RangoHorario(rango_horario_id),
+	pedido_cupon_monto DECIMAL(18,2)
 );
 
 ALTER TABLE GAME_OF_JOINS.BI_H_Pedido
@@ -232,7 +236,7 @@ ADD CONSTRAINT PK_BI_H_Pedido PRIMARY KEY
 	pedido_usuario_dni,
 	pedido_local_id,
 	pedido_repartidor_dni,
-	pedido_medio_pago_id,
+	pedido_tipo_medio_pago_id,
 	pedido_tiempo_id,
 	pedido_dia_semana_id,
 	pedido_rango_horario_id
@@ -443,18 +447,18 @@ INSERT INTO GAME_OF_JOINS.BI_H_Reclamo
 	JOIN GAME_OF_JOINS.BI_D_Local L ON P.pedido_local_id = L.local_id
 GO
 
-/*
-INSERT INTO GAME_OF_JOINS.BI_H_Pedido (pedido_nro, pedido_usuario_dni, pedido_local_id, pedido_repartidor_dni, pedido_medio_pago_id, pedido_estado_id, pedido_tiempo, pedido_dia_semana_id, pedido_rango_horario)
-	SELECT P.pedido_nro, U.Usuario_dni, L.local_id, P.pedido_repartidor_dni, P.pedido_medio_pago_id, P.pedido_estado_id, TI.tiempo_id, DI.dia_id, RH.rango_horario_id
-	FROM GAME_OF_JOINS.Pedido P 
-	JOIN GAME_OF_JOINS.BI_D_Tiempo TI ON TI.anio = DATEPART(YEAR, P.pedido_fecha_hora) AND TI.mes = DATEPART(MONTH, P.pedido_fecha_hora)
-	JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia = DATENAME(WEEKDAY, P.pedido_fecha_hora)
-	JOIN GAME_OF_JOINS.BI_D_RangoHorario RH ON RH.rango_horario = GAME_OF_JOINS.GetRangoHorario(P.pedido_fecha_hora)
-	INNER JOIN GAME_OF_JOINS.BI_D_Usuario U ON P.pedido_usuario_dni = U.Usuario_dni
+
+INSERT INTO GAME_OF_JOINS.BI_H_Pedido (pedido_nro, pedido_usuario_dni, pedido_local_id, pedido_repartidor_dni, pedido_estado_id, pedido_tipo_medio_pago_id, pedido_tiempo_id, pedido_dia_semana_id, pedido_rango_horario_id, pedido_cupon_monto)
+	SELECT P.pedido_nro, U.Usuario_dni, L.local_id, P.pedido_repartidor_dni, P.pedido_estado_id, TMP.tipo_medio_pago_id, TI.tiempo_id, DI.dia_id, RH.rango_horario_id, P.pedido_total_cupones
+	FROM GAME_OF_JOINS.Pedido P
+	JOIN GAME_OF_JOINS.MedioDePago MP ON P.pedido_medio_pago_id = MP.medio_pago_id
+	INNER JOIN GAME_OF_JOINS.BI_D_TipoMedioDePago TMP ON TMP.tipo_medio_pago_id = MP.tipo_medio_pago_id
+	INNER JOIN GAME_OF_JOINS.BI_D_Tiempo TI ON TI.anio = DATEPART(YEAR, P.pedido_fecha_hora) AND TI.mes = DATEPART(MONTH, P.pedido_fecha_hora)
+	INNER JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia = DATENAME(WEEKDAY, P.pedido_fecha_hora)
+	INNER JOIN GAME_OF_JOINS.BI_D_RangoHorario RH ON RH.rango_horario = GAME_OF_JOINS.GetRangoHorario(P.pedido_fecha_hora)
+	JOIN GAME_OF_JOINS.BI_D_Usuario U ON P.pedido_usuario_dni = U.Usuario_dni
 	JOIN GAME_OF_JOINS.BI_D_Local L ON P.pedido_local_id = L.local_id
 GO
-*/
-
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------CREATE VIEWS------------------------------------------------------------------------------------------------
@@ -464,9 +468,9 @@ GO
 
 CREATE VIEW GAME_OF_JOINS.BI_V_RECLAMOS_MENSUALES AS (
 	SELECT 
-		(SELECT TOP 1 local_nombre FROM GAME_OF_JOINS.BI_D_Local WHERE local_id = R.reclamo_local_id) as LOCAL,
-		(SELECT TOP 1 anio FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = R.reclamo_tiempo_id) AS ANIO,
-		(SELECT TOP 1 mes FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = R.reclamo_tiempo_id) AS MES,
+		(SELECT local_nombre FROM GAME_OF_JOINS.BI_D_Local WHERE local_id = R.reclamo_local_id) as LOCAL,
+		(SELECT anio FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = R.reclamo_tiempo_id) AS ANIO,
+		(SELECT mes FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = R.reclamo_tiempo_id) AS MES,
 		(SELECT dia FROM GAME_OF_JOINS.BI_D_Dias WHERE dia_id = R.reclamo_dia_semana_id) AS DIA_SEMANA, 
 		(SELECT rango_horario FROM GAME_OF_JOINS.BI_D_RangoHorario WHERE rango_horario_id = R.reclamo_rango_horario_id) AS RANGO_HORARIO,
 		 COUNT(1) AS TOTAL_PEDIDOS 
@@ -478,10 +482,10 @@ GO
 
 CREATE VIEW GAME_OF_JOINS.BI_V_TIEMPO_RESOLUCION_RECLAMOS AS (
 	SELECT
-		(SELECT TOP 1 anio FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = R.reclamo_tiempo_id) AS ANIO,
-		(SELECT TOP 1 mes FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = R.reclamo_tiempo_id) AS MES,
-		(SELECT TOP 1 tipo_reclamo FROM GAME_OF_JOINS.BI_D_TipoReclamo TR WHERE TR.tipo_reclamo_id = R.reclamo_tipo_reclamo) AS TIPO_RECLAMO,
-		(SELECT TOP 1 rango_etario_id from GAME_OF_JOINS.BI_D_RangoEtario RE WHERE RE.rango_etario_id = R.reclamo_rango_etario_operador) AS RANGO_ETARIO,
+		(SELECT anio FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = R.reclamo_tiempo_id) AS ANIO,
+		(SELECT mes FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = R.reclamo_tiempo_id) AS MES,
+		(SELECT tipo_reclamo FROM GAME_OF_JOINS.BI_D_TipoReclamo TR WHERE TR.tipo_reclamo_id = R.reclamo_tipo_reclamo) AS TIPO_RECLAMO,
+		(SELECT rango_etario_id from GAME_OF_JOINS.BI_D_RangoEtario RE WHERE RE.rango_etario_id = R.reclamo_rango_etario_operador) AS RANGO_ETARIO,
 		COUNT(1) AS TOTAL_PEDIDOS,
 		AVG(DATEDIFF(MINUTE, R.reclamo_fecha_creacion, R.reclamo_fecha_solucion)) AS PROMEDIO_RESOLUCION
 	FROM GAME_OF_JOINS.BI_H_RECLAMO R
@@ -491,30 +495,26 @@ GO
 
 CREATE VIEW GAME_OF_JOINS.BI_V_MONTO_MENSUAL_CUPONES AS (
 	SELECT 
-		(SELECT TOP 1 anio FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = R.reclamo_tiempo_id) AS ANIO,
-		(SELECT TOP 1 mes FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = R.reclamo_tiempo_id) AS MES, 
+		(SELECT anio FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = R.reclamo_tiempo_id) AS ANIO,
+		(SELECT mes FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = R.reclamo_tiempo_id) AS MES, 
 		SUM(reclamo_monto_cupon) AS MONTO_TOTAL
 		FROM GAME_OF_JOINS.BI_H_Reclamo R
 		GROUP BY reclamo_tiempo_id
 )
 GO
 
-
-/*
 CREATE VIEW GAME_OF_JOINS.BI_V_CUPONES_USUARIO AS (
 	SELECT 
-		DATEPART(YEAR, BIC.cupon_fecha_alta) AS ANIO,
-		DATEPART(MONTH, BIC.cupon_fecha_alta) AS MES, 
-		(SELECT TOP 1 rango_etario_id from GAME_OF_JOINS.BI_D_RangoEtario RE WHERE RE.rango_etario_id = U.usuario_rango_etario) AS RANGO_ETARIO,
-		SUM(cupon_monto) AS MONTO_TOTAL
-		FROM GAME_OF_JOINS.Cupon C 
-		INNER JOIN GAME_OF_JOINS.BI_D_Cupon BIC ON C.cupon_nro = BIC.cupon_nro
-		INNER JOIN GAME_OF_JOINS.BI_D_Usuario U ON C.cupon_usuario = U.usuario_dni 
-		GROUP BY usuario_rango_etario, BIC.cupon_fecha_alta
+		(SELECT anio FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = P.pedido_tiempo_id) AS ANIO,
+		(SELECT mes FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = P.pedido_tiempo_id) AS MES, 
+		(SELECT rango_etario_id from GAME_OF_JOINS.BI_D_RangoEtario RE WHERE RE.rango_etario_id = U.usuario_rango_etario) AS RANGO_ETARIO,
+		SUM(P.pedido_cupon_monto) AS MONTO_TOTAL
+		FROM 
+		GAME_OF_JOINS.BI_H_Pedido P
+		INNER JOIN GAME_OF_JOINS.BI_D_Usuario U ON P.pedido_usuario_dni = U.usuario_dni 
+		GROUP BY U.usuario_rango_etario, P.pedido_tiempo_id
 )
 GO
-*/
-
 
 --Cantidad de reclamos mensuales recibidos por cada local en función del día de la semana y rango horario.
 SELECT * FROM GAME_OF_JOINS.BI_V_RECLAMOS_MENSUALES
@@ -526,5 +526,5 @@ SELECT * FROM GAME_OF_JOINS.BI_V_TIEMPO_RESOLUCION_RECLAMOS
 --Monto mensual generado en cupones a partir de reclamos.
 SELECT * FROM GAME_OF_JOINS.BI_V_MONTO_MENSUAL_CUPONES
 
---Monto total de los cupones utilizados por mes en función del rango etario de los usuarios.
-
+--Monto total de los cupones utilizados por mes en función del rango etario de los usuarios. (PODEMOS ASUMIR QUE AL SER CUPONES UTILIZADOS Y NO GENERADOS, LA FECHA A ANALIZAR ES LA DE LA CREACION DEL PEDIDO)
+SELECT * FROM GAME_OF_JOINS.BI_V_CUPONES_USUARIO

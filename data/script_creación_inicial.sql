@@ -339,7 +339,7 @@ CREATE TABLE GAME_OF_JOINS.Pedido(
 	pedido_direccion_usuario_id decimal(18,0) REFERENCES GAME_OF_JOINS.DireccionUsuario(direccion_usuario_id),
 	pedido_fecha_hora datetime2(3) NULL,
 	pedido_total_productos decimal(18,0),
-	pedido_total_cupones decimal(18,0),
+	pedido_total_cupones decimal(18,2),
 	pedido_tarifa decimal(18,0),
 	pedido_propina decimal(18,0),
 	pedido_total_servicio decimal(18,2) NULL,
@@ -596,7 +596,6 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_cupon
         WHERE CUPON_NRO IS NOT NULL
     ) AS subquery
     WHERE row_num = 1
-    --AND cupon_nro NOT IN (SELECT cupon_nro FROM GAME_OF_JOINS.Cupon);
 
     INSERT INTO GAME_OF_JOINS.Cupon
     (cupon_nro, cupon_usuario, cupon_tipo_id, cupon_monto_descuento, cupon_fecha_alta, cupon_fecha_vencimiento)
