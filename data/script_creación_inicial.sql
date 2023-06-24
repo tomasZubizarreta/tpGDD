@@ -74,6 +74,9 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'EstadoEnvio')
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'EstadoReclamo')
     DROP TABLE GAME_OF_JOINS.EstadoReclamo;
 
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'TipoReclamo')
+    DROP TABLE GAME_OF_JOINS.TipoReclamo;
+
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'LocalTipo')
     DROP TABLE GAME_OF_JOINS.LocalTipo;
 
@@ -140,6 +143,8 @@ IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_cupon_tipo' AND sch
     DROP PROCEDURE GAME_OF_JOINS.migrar_tipo_cupon;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_provincia' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
     DROP PROCEDURE GAME_OF_JOINS.migrar_provincia;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_tipo_reclamo' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
+    DROP PROCEDURE GAME_OF_JOINS.migrar_tipo_reclamo;
 GO
 
 --------------------------- Creacion del schema --------------------------- 
@@ -159,6 +164,11 @@ CREATE TABLE GAME_OF_JOINS.provincia (
 CREATE TABLE GAME_OF_JOINS.EstadoReclamo (
 	estado_reclamo_id int IDENTITY PRIMARY KEY,
 	estado nvarchar(255) null
+);
+
+CREATE TABLE GAME_OF_JOINS.TipoReclamo (
+	tipo_reclamo_id int IDENTITY PRIMARY KEY,
+	tipo_reclamo nvarchar(40) NULL
 );
 
 CREATE TABLE GAME_OF_JOINS.EstadoEnvio(
@@ -391,6 +401,16 @@ AS
 	END
 GO
 
+CREATE PROCEDURE GAME_OF_JOINS.migrar_tipo_reclamo
+AS
+	BEGIN
+		INSERT INTO GAME_OF_JOINS.TipoReclamo(tipo_reclamo)
+		SELECT DISTINCT M.RECLAMO_TIPO
+		FROM [GD1C2023].[gd_esquema].[Maestra] AS M
+		WHERE M.RECLAMO_NRO IS NOT NULL
+	END
+GO
+
 CREATE PROCEDURE GAME_OF_JOINS.migrar_local_tipo
 AS
 	BEGIN
@@ -602,8 +622,9 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_reclamo
   BEGIN
 	INSERT INTO GAME_OF_JOINS.Reclamo
 	(reclamo_nro, reclamo_pedido, reclamo_usuario, reclamo_tipo, reclamo_descripcion, reclamo_fecha_hora_creacion, reclamo_operador, reclamo_estado, reclamo_solucion, reclamo_fecha_hora_solucion, reclamo_calificacion)
-	SELECT DISTINCT RECLAMO_NRO, p.pedido_nro, u.usuario_dni, RECLAMO_TIPO, RECLAMO_DESCRIPCION, RECLAMO_FECHA, o.operador_id, e.estado_reclamo_id, RECLAMO_SOLUCION, RECLAMO_FECHA_SOLUCION, RECLAMO_CALIFICACION
+	SELECT DISTINCT RECLAMO_NRO, p.pedido_nro, u.usuario_dni, TR.tipo_reclamo_id, RECLAMO_DESCRIPCION, RECLAMO_FECHA, o.operador_id, e.estado_reclamo_id, RECLAMO_SOLUCION, RECLAMO_FECHA_SOLUCION, RECLAMO_CALIFICACION
 	FROM [GD1C2023].[gd_esquema].[Maestra] a
+	inner join GAME_OF_JOINS.TipoReclamo TR ON TR.tipo_reclamo = RECLAMO_TIPO
 	inner join GAME_OF_JOINS.Pedido p on p.pedido_nro = a.PEDIDO_NRO
 	inner join GAME_OF_JOINS.Usuario u on u.usuario_dni = a.USUARIO_DNI
 	inner join GAME_OF_JOINS.OperadorReclamo o on o.operador_dni = a.OPERADOR_RECLAMO_DNI AND o.operador_nombre = a.OPERADOR_RECLAMO_NOMBRE AND o.operador_apellido = a.OPERADOR_RECLAMO_APELLIDO
@@ -797,6 +818,7 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_servicio_mensajeria
   END
  GO
 
+EXEC GAME_OF_JOINS.migrar_tipo_reclamo
 EXEC GAME_OF_JOINS.migrar_provincia
 EXEC GAME_OF_JOINS.migrar_paquete
 EXEC GAME_OF_JOINS.migrar_localidad
