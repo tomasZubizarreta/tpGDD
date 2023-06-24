@@ -43,6 +43,27 @@ IF EXISTS (SELECT 1 FROM sys.all_views where name = 'BI_V_MONTO_MENSUAL_CUPONES'
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_H_Reclamo')
     DROP TABLE GAME_OF_JOINS.BI_H_Reclamo;
 
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_H_Pedido')
+    DROP TABLE GAME_OF_JOINS.BI_H_Pedido;
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Usuario')
+    DROP TABLE GAME_OF_JOINS.BI_D_Usuario;
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Repartidor')
+    DROP TABLE GAME_OF_JOINS.BI_D_Repartidor;
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Movilidad')
+    DROP TABLE GAME_OF_JOINS.BI_D_Movilidad;
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_TipoMedioDePago')
+    DROP TABLE GAME_OF_JOINS.BI_D_TipoMedioDePago;
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Localidad')
+    DROP TABLE GAME_OF_JOINS.BI_D_Localidad;
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Provincia')
+    DROP TABLE GAME_OF_JOINS.BI_D_Provincia;
+
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Local')
     DROP TABLE GAME_OF_JOINS.BI_D_Local;
 
@@ -73,29 +94,8 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_OperadorReclamo')
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_TipoReclamo')
 	DROP TABLE GAME_OF_JOINS.BI_D_TipoReclamo
 
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_H_Pedido')
-    DROP TABLE GAME_OF_JOINS.BI_H_Reclamo;
-
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Estado_Pedido')
-    DROP TABLE GAME_OF_JOINS.BI_D_Estado_Pedido;
-
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Usuario')
-    DROP TABLE GAME_OF_JOINS.BI_D_Usuario;
-
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Movilidad')
-    DROP TABLE GAME_OF_JOINS.BI_D_Movilidad;
-
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Repartidor')
-    DROP TABLE GAME_OF_JOINS.BI_D_Repartidor;
-
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_TipoMedioDePago')
-    DROP TABLE GAME_OF_JOINS.BI_D_TipoMedioDePago;
-
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Localidad')
-    DROP TABLE GAME_OF_JOINS.BI_D_Localidad;
-
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Provincia')
-    DROP TABLE GAME_OF_JOINS.BI_D_Provincia;
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_EstadoPedido')
+    DROP TABLE GAME_OF_JOINS.BI_D_EstadoPedido;
 
 IF EXISTS (SELECT 1 FROM sys.all_objects WHERE name = 'GetRangoHorario')
     DROP FUNCTION GAME_OF_JOINS.GetRangoHorario;
@@ -195,7 +195,7 @@ CREATE TABLE GAME_OF_JOINS.BI_D_Usuario(
 
 CREATE TABLE GAME_OF_JOINS.BI_D_Movilidad(
 	movilidad_id decimal(18,0) PRIMARY KEY not null,
-	movilidad_nombre nvarchar(50)
+	movilidad nvarchar(50)
 );
 
 CREATE TABLE GAME_OF_JOINS.BI_D_Repartidor(
@@ -206,7 +206,7 @@ CREATE TABLE GAME_OF_JOINS.BI_D_Repartidor(
 
 CREATE TABLE GAME_OF_JOINS.BI_D_TipoMedioDePago(
 	tipo_medio_pago_id int IDENTITY(1,1) PRIMARY KEY,
-	tipo_medio_pago_nombre nvarchar(50) NULL
+	tipo_medio_pago nvarchar(50) NULL
 );
 
 CREATE TABLE GAME_OF_JOINS.BI_H_Pedido (
@@ -214,13 +214,12 @@ CREATE TABLE GAME_OF_JOINS.BI_H_Pedido (
 	pedido_usuario_dni decimal(18,0) REFERENCES GAME_OF_JOINS.BI_D_Usuario(usuario_dni),
 	pedido_local_id int REFERENCES GAME_OF_JOINS.BI_D_Local(local_id),
 	pedido_repartidor_dni decimal(18,0) REFERENCES GAME_OF_JOINS.BI_D_Repartidor(repartidor_dni), 
+	pedido_estado_id int REFERENCES GAME_OF_JOINS.BI_D_EstadoPedido(estado_pedido_id),
 	pedido_medio_pago_id int REFERENCES GAME_OF_JOINS.BI_D_TipoMedioDePago(tipo_medio_pago_id),
 	pedido_tiempo int not null REFERENCES GAME_OF_JOINS.BI_D_Tiempo(tiempo_id),
 	pedido_dia_semana_id int not null REFERENCES GAME_OF_JOINS.BI_D_Dias(dia_id),
-	pedido_rango_horario int not null REFERENCES GAME_OF_JOINS.BI_D_RangoHorario(rango_horario_id),
-	pedido_estado_id int REFERENCES GAME_OF_JOINS.BI_D_EstadoPedido(estado_pedido_id)
+	pedido_rango_horario int not null REFERENCES GAME_OF_JOINS.BI_D_RangoHorario(rango_horario_id)
 );
-
 
 ALTER TABLE GAME_OF_JOINS.BI_H_Reclamo
 ADD CONSTRAINT PK_BI_H_Reclamo PRIMARY KEY 
@@ -372,8 +371,8 @@ INSERT INTO GAME_OF_JOINS.BI_D_Local
 	SELECT local_nombre, local_tipo_id, (SELECT TOP 1 categoria_id FROM GAME_OF_JOINS.BI_D_Categoria ORDER BY NEWID()) FROM
 	GAME_OF_JOINS.LocalRegistrado
 
-INSERT INTO GAME_OF_JOINS.BI_D_TipoReclamo
-	SELECT tipo_reclamo FROM GAME_OF_JOINS.TipoReclamo
+--INSERT INTO GAME_OF_JOINS.BI_D_TipoReclamo
+--	SELECT tipo_reclamo FROM GAME_OF_JOINS.TipoReclamo
 
 INSERT INTO GAME_OF_JOINS.BI_D_Cupon (cupon_nro, cupon_monto)
 	SELECT cupon_nro, cupon_monto_descuento FROM GAME_OF_JOINS.Cupon
@@ -396,15 +395,38 @@ INSERT INTO GAME_OF_JOINS.BI_H_Reclamo
 	JOIN GAME_OF_JOINS.BI_D_Local L ON P.pedido_local_id = L.local_id
 GO
 
-INSERT INTO GAME_OF_JOINS.BI_H_Pedido
-SELECT U.Usuario_dni, L.local_id, TI.tiempo_id, DI.dia_id, RH.rango_horario_id, 
-FROM GAME_OF_JOINS.Pedido P
-JOIN GAME_OF_JOINS.BI_D_Tiempo TI ON TI.anio = DATEPART(YEAR, P.pedido_fecha_hora) AND TI.mes = DATEPART(MONTH, P.pedido_fecha_hora)
-JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia = DATENAME(WEEKDAY, P.pedido_fecha_hora)
-JOIN GAME_OF_JOINS.BI_D_RangoHorario RH ON RH.rango_horario = GAME_OF_JOINS.GetRangoHorario(P.pedido_fecha_hora)
-INNER JOIN GAME_OF_JOINS.BI_D_Usuario ON P.pedido_usuario_dni = U.Usuario_dni
-JOIN GAME_OF_JOINS.BI_D_Local ON P.pedido_local_id = L.local_id
+INSERT INTO GAME_OF_JOINS.BI_D_Localidad(localidad_id, localidad)
+	SELECT L.localidad_id, L.localidad FROM GAME_OF_JOINS.Localidad L
 
+INSERT INTO GAME_OF_JOINS.BI_D_Provincia(provincia_id, provincia)
+	SELECT P.provincia_id, P.provincia FROM GAME_OF_JOINS.Provincia P
+
+INSERT INTO GAME_OF_JOINS.BI_D_EstadoPedido (estado_pedido_id, estado)
+	SELECT E.estado_pedido_id, E.estado FROM GAME_OF_JOINS.EstadoPedido E
+
+INSERT INTO GAME_OF_JOINS.BI_D_Usuario (usuario_dni/*, usuario_rango_etario*/)
+	SELECT usuario_dni
+	FROM GAME_OF_JOINS.Usuario --U
+--	JOIN GAME_OF_JOINS.BI_D_RangoEtario RE ON RE.rango_etario_id = GAME_OF_JOINS.GetRangoEtario(U.usuario_fecha_nacimiento)
+
+INSERT INTO GAME_OF_JOINS.BI_D_Movilidad (movilidad_id, movilidad)
+	SELECT movilidad_id, movilidad FROM GAME_OF_JOINS.Movilidad
+
+INSERT INTO GAME_OF_JOINS.BI_D_Repartidor (repartidor_dni, repartidor_movilidad/*, repartidor_rango_etario*/)
+	SELECT repartidor_dni, repartidor_movilidad FROM GAME_OF_JOINS.Repartidor --R
+--	JOIN GAME_OF_JOINS.BI_D_RangoEtario RE ON RE.rango_etario_id = GAME_OF_JOINS.GetRangoEtario(R.repartidor_fecha_nacimiento)
+
+INSERT INTO GAME_OF_JOINS.BI_D_TipoMedioDePago (tipo_medio_pago_id, tipo_medio_pago)
+	SELECT tipo_medio_pago_id, tipo_medio_pago FROM GAME_OF_JOINS.TipoMedioDePago
+
+INSERT INTO GAME_OF_JOINS.BI_H_Pedido (pedido_nro, pedido_usuario_dni, pedido_local_id, pedido_repartidor_dni, pedido_medio_pago_id, pedido_estado_id, pedido_tiempo, pedido_dia_semana_id, pedido_rango_horario)
+	SELECT P.pedido_nro, U.Usuario_dni, L.local_id, P.pedido_repartidor_dni, P.pedido_medio_pago_id, P.pedido_estado_id, TI.tiempo_id, DI.dia_id, RH.rango_horario_id
+	FROM GAME_OF_JOINS.Pedido P 
+	JOIN GAME_OF_JOINS.BI_D_Tiempo TI ON TI.anio = DATEPART(YEAR, P.pedido_fecha_hora) AND TI.mes = DATEPART(MONTH, P.pedido_fecha_hora)
+	JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia = DATENAME(WEEKDAY, P.pedido_fecha_hora)
+	JOIN GAME_OF_JOINS.BI_D_RangoHorario RH ON RH.rango_horario = GAME_OF_JOINS.GetRangoHorario(P.pedido_fecha_hora)
+	INNER JOIN GAME_OF_JOINS.BI_D_Usuario U ON P.pedido_usuario_dni = U.Usuario_dni
+	JOIN GAME_OF_JOINS.BI_D_Local L ON P.pedido_local_id = L.local_id
 GO
 
 
