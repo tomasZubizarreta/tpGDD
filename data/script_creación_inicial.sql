@@ -596,7 +596,7 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_cupon
         WHERE CUPON_NRO IS NOT NULL
     ) AS subquery
     WHERE row_num = 1
-    AND cupon_nro NOT IN (SELECT cupon_nro FROM GAME_OF_JOINS.Cupon);
+    --AND cupon_nro NOT IN (SELECT cupon_nro FROM GAME_OF_JOINS.Cupon);
 
     INSERT INTO GAME_OF_JOINS.Cupon
     (cupon_nro, cupon_usuario, cupon_tipo_id, cupon_monto_descuento, cupon_fecha_alta, cupon_fecha_vencimiento)
@@ -644,7 +644,6 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_cupon_reclamo
 	ON M.CUPON_RECLAMO_NRO = C.cupon_nro
 	INNER JOIN GAME_OF_JOINS.Reclamo R
 	ON M.RECLAMO_NRO = R.reclamo_nro 
-	AND R.reclamo_usuario = C.cupon_usuario
 	WHERE CUPON_RECLAMO_NRO IS NOT NULL
   END
  GO
