@@ -310,7 +310,7 @@ CREATE TABLE GAME_OF_JOINS.DireccionUsuario(
 );
 
 CREATE TABLE GAME_OF_JOINS.OperadorReclamo(
-	operador_id int IDENTITY PRIMARY KEY,
+	operador_id int IDENTITY(1,1) PRIMARY KEY,
 	operador_dni decimal(18,0) NOT NULL, 
 	operador_nombre nvarchar(255) NULL,
 	operador_apellido nvarchar(255) NULL,
@@ -601,12 +601,12 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_reclamo
  AS
   BEGIN
 	INSERT INTO GAME_OF_JOINS.Reclamo
-	(reclamo_nro, reclamo_pedido, reclamo_usuario, reclamo_tipo, reclamo_descripcion, reclamo_fecha_hora_creacion, /*reclamo_operador,*/ reclamo_estado, reclamo_solucion, reclamo_fecha_hora_solucion, reclamo_calificacion)
-	SELECT DISTINCT RECLAMO_NRO, p.pedido_nro, u.usuario_dni, RECLAMO_TIPO, RECLAMO_DESCRIPCION, RECLAMO_FECHA, /*o.operador_dni,*/ e.estado_reclamo_id, RECLAMO_SOLUCION, RECLAMO_FECHA_SOLUCION, RECLAMO_CALIFICACION
+	(reclamo_nro, reclamo_pedido, reclamo_usuario, reclamo_tipo, reclamo_descripcion, reclamo_fecha_hora_creacion, reclamo_operador, reclamo_estado, reclamo_solucion, reclamo_fecha_hora_solucion, reclamo_calificacion)
+	SELECT DISTINCT RECLAMO_NRO, p.pedido_nro, u.usuario_dni, RECLAMO_TIPO, RECLAMO_DESCRIPCION, RECLAMO_FECHA, o.operador_id, e.estado_reclamo_id, RECLAMO_SOLUCION, RECLAMO_FECHA_SOLUCION, RECLAMO_CALIFICACION
 	FROM [GD1C2023].[gd_esquema].[Maestra] a
 	inner join GAME_OF_JOINS.Pedido p on p.pedido_nro = a.PEDIDO_NRO
 	inner join GAME_OF_JOINS.Usuario u on u.usuario_dni = a.USUARIO_DNI
-	inner join GAME_OF_JOINS.OperadorReclamo o on o.operador_dni = a.OPERADOR_RECLAMO_DNI
+	inner join GAME_OF_JOINS.OperadorReclamo o on o.operador_dni = a.OPERADOR_RECLAMO_DNI AND o.operador_nombre = a.OPERADOR_RECLAMO_NOMBRE AND o.operador_apellido = a.OPERADOR_RECLAMO_APELLIDO
 	inner join GAME_OF_JOINS.EstadoReclamo e on e.estado = a.RECLAMO_ESTADO
 	WHERE RECLAMO_NRO IS NOT NULL
   END
