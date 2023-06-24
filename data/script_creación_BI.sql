@@ -1,10 +1,5 @@
 /*
 
-Cantidad de reclamos mensuales recibidos por cada local en función del día de la semana y rango horario.
-
-Tiempo promedio de resolución de reclamos mensual según cada tipo de reclamo y rango etario de los operadores.
-El tiempo de resolución debe calcularse en minutos y representa la diferencia entre la fecha/hora en que se realizó el reclamo y la fecha/hora que se resolvió.
-
 Monto mensual generado en cupones a partir de reclamos.
 
 
@@ -36,17 +31,17 @@ Estados reclamos
 USE GD1C2023
 GO
 
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_H_Reclamos')
-    DROP TABLE GAME_OF_JOINS.BI_H_Reclamos;
+IF EXISTS (SELECT 1 FROM sys.all_views where name = 'BI_V_RECLAMOS_MENSUALES')
+	DROP VIEW GAME_OF_JOINS.BI_V_RECLAMOS_MENSUALES
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_H_Reclamo')
+    DROP TABLE GAME_OF_JOINS.BI_H_Reclamo;
 
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Local')
     DROP TABLE GAME_OF_JOINS.BI_D_Local;
 
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Anio')
-    DROP TABLE GAME_OF_JOINS.BI_D_Anio;
-
-IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Mes')
-    DROP TABLE GAME_OF_JOINS.BI_D_Mes;
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Tiempo')
+    DROP TABLE GAME_OF_JOINS.BI_D_Tiempo;
 
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Dias')
     DROP TABLE GAME_OF_JOINS.BI_D_Dias;
@@ -63,16 +58,22 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Categoria')
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_TipoLocal')
     DROP TABLE GAME_OF_JOINS.BI_D_TipoLocal;
 
-IF OBJECT_ID('GAME_OF_JOINS.GetRangoHorario','AF') IS NOT NULL
-	DROP FUNCTION GAME_OF_JOINS.GetRangoHorario;
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Cupon')
+    DROP TABLE GAME_OF_JOINS.BI_D_Cupon;
 
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_OperadorReclamo')
+    DROP TABLE GAME_OF_JOINS.BI_D_OperadorReclamo;
 
-CREATE TABLE GAME_OF_JOINS.BI_D_Anio (
-	anio int IDENTITY(1900,1) PRIMARY KEY CHECK (anio > 0)
-);
+IF EXISTS (SELECT 1 FROM sys.all_objects WHERE name = 'GetRangoHorario')
+    DROP FUNCTION GAME_OF_JOINS.GetRangoHorario;
 
-CREATE TABLE GAME_OF_JOINS.BI_D_Mes (
-	mes int IDENTITY(1,1) PRIMARY KEY CHECK (mes > 0 AND mes <= 12)
+IF EXISTS (SELECT 1 FROM sys.all_objects WHERE name = 'GetRangoEtario')
+	DROP FUNCTION GAME_OF_JOINS.GetRangoEtario
+
+CREATE TABLE GAME_OF_JOINS.BI_D_Tiempo (
+	tiempo_id int IDENTITY(1,1) PRIMARY KEY,
+	anio int not null CHECK (anio > 0),
+	mes int not null CHECK (mes > 0 AND mes <= 12)
 );
 
 CREATE TABLE GAME_OF_JOINS.BI_D_Dias (
@@ -82,8 +83,7 @@ CREATE TABLE GAME_OF_JOINS.BI_D_Dias (
 
 CREATE TABLE GAME_OF_JOINS.BI_D_RangoHorario (
 	rango_horario_id int IDENTITY(1,1) PRIMARY KEY,
-	rango_horario_desde nvarchar(5) not null,
-	rango_horario_hasta nvarchar(5) not null,
+	rango_horario nvarchar(15) not null
 );
 
 CREATE TABLE GAME_OF_JOINS.BI_D_RangoEtario (
@@ -104,45 +104,64 @@ CREATE TABLE GAME_OF_JOINS.BI_D_TipoLocal (
 
 CREATE TABLE GAME_OF_JOINS.BI_D_Local (
 	local_id int IDENTITY(1,1) PRIMARY KEY,
-	nombre nvarchar(30),
+	local_nombre nvarchar(30),
 	tipo_local_id int REFERENCES GAME_OF_JOINS.BI_D_TipoLocal(tipo_local_id),
 	categoria_id INT REFERENCES GAME_OF_JOINS.BI_D_Categoria(categoria_id)
 );
 
-CREATE TABLE GAME_OF_JOINS.BI_H_Reclamos (
-	reclamo_anio int not null,
-	reclamo_mes int not null, 
-	reclamo_dia int not null,
-	reclamo_rango_horario int not null,
-	reclamo_local int not null,
-	reclamo_rango_etario_op int not null,
-	reclamo_tiempo_resolucion int not null,
-	reclamo_monto_cupon int not null
+CREATE TABLE GAME_OF_JOINS.BI_D_OperadorReclamo (
+	operador_id int PRIMARY KEY,
+	operador_dni decimal(18,0),
+	operador_nombre nvarchar(40),
+	operador_apellido nvarchar(40),
+	operador_fecha_nacimiento date
 );
 
-ALTER TABLE GAME_OF_JOINS.BI_H_Reclamos
-ADD CONSTRAINT PK_BI_H_Reclamos PRIMARY KEY 
-(
-	reclamo_anio,
-	reclamo_mes,
-	reclamo_dia,
-	reclamo_rango_horario,
-	reclamo_local,
-	reclamo_rango_etario_op
+CREATE TABLE GAME_OF_JOINS.BI_D_Cupon (
+	cupon_id int IDENTITY(1,1) PRIMARY KEY,
+	cupon_nro decimal(18,0),
+	cupon_monto decimal(18,0)
 );
 
-ALTER TABLE GAME_OF_JOINS.BI_H_Reclamos ADD CONSTRAINT FK_BI_H_Reclamos_Local
-FOREIGN KEY (reclamo_local) REFERENCES GAME_OF_JOINS.BI_D_Local(local_id);
+CREATE TABLE GAME_OF_JOINS.BI_H_Reclamo (
+	reclamo_tiempo_id int not null,
+	reclamo_dia_semana_id int not null,
+	reclamo_rango_horario_id int not null,
+	reclamo_operador_id int not null,
+	reclamo_local_id int not null,
+	reclamo_fecha_creacion datetime not null,
+	reclamo_fecha_solucion datetime not null,
+);
 
-ALTER TABLE GAME_OF_JOINS.BI_H_Reclamos ADD CONSTRAINT FK_BI_H_Reclamos_RangoHorario
-FOREIGN KEY (reclamo_rango_horario) REFERENCES GAME_OF_JOINS.BI_D_RangoHorario(rango_horario_id);
+ALTER TABLE GAME_OF_JOINS.BI_H_Reclamo
+ADD CONSTRAINT PK_BI_H_Reclamo PRIMARY KEY 
+(	
+	reclamo_tiempo_id,
+	reclamo_dia_semana_id,
+	reclamo_rango_horario_id,
+	reclamo_operador_id,
+	reclamo_local_id
+);
 
-ALTER TABLE GAME_OF_JOINS.BI_H_Reclamos ADD CONSTRAINT FK_BI_H_Reclamos_RangoEtario
-FOREIGN KEY (reclamo_rango_etario_op) REFERENCES GAME_OF_JOINS.BI_D_RangoEtario(rango_etario_id);
+ALTER TABLE GAME_OF_JOINS.BI_H_Reclamo ADD CONSTRAINT FK_BI_H_Reclamo_Tiempo
+FOREIGN KEY (reclamo_tiempo_id) REFERENCES GAME_OF_JOINS.BI_D_Tiempo(tiempo_id);
 
+ALTER TABLE GAME_OF_JOINS.BI_H_Reclamo ADD CONSTRAINT FK_BI_H_Reclamo_DiaSemana
+FOREIGN KEY (reclamo_dia_semana_id) REFERENCES GAME_OF_JOINS.BI_D_Dias(dia_id);
+
+ALTER TABLE GAME_OF_JOINS.BI_H_Reclamo ADD CONSTRAINT FK_BI_H_Reclamo_RangoHorario
+FOREIGN KEY (reclamo_rango_horario_id) REFERENCES GAME_OF_JOINS.BI_D_RangoHorario(rango_horario_id);
+
+ALTER TABLE GAME_OF_JOINS.BI_H_Reclamo ADD CONSTRAINT FK_BI_H_Reclamo_OperadorReclamo
+FOREIGN KEY (reclamo_operador_id) REFERENCES GAME_OF_JOINS.BI_D_OperadorReclamo(operador_id);
+/*
+ALTER TABLE GAME_OF_JOINS.BI_H_Reclamo ADD CONSTRAINT FK_BI_H_Reclamo_Cupon
+FOREIGN KEY (reclamo_cupon_id) REFERENCES GAME_OF_JOINS.BI_D_Cupon(cupon_id);
+*/
+ALTER TABLE GAME_OF_JOINS.BI_H_Reclamo ADD CONSTRAINT FK_BI_H_Reclamo_Local
+FOREIGN KEY (reclamo_local_id) REFERENCES GAME_OF_JOINS.BI_D_Local(local_id);
 GO
-
-----------------------------------------------------------TRASPASO DE INFORMACION DE OLTP A OLAP------------------------------------------------------
+----------------------------------------------------------TRASPASO DE INFORMACION DE OLTP A OLAP-----------------------------------------------------
 
 CREATE FUNCTION GAME_OF_JOINS.GetRangoHorario(@fecha DATETIME)
 RETURNS NVARCHAR(50)
@@ -178,20 +197,47 @@ BEGIN
 END;
 GO
 
+CREATE FUNCTION GAME_OF_JOINS.GetRangoEtario(@fecha DATE)
+RETURNS INT
+AS
+BEGIN
+    DECLARE @RangoEtario INT
+
+    -- Obtener la edad a partir de la fecha
+    DECLARE @edad INT
+    SET @edad = DATEDIFF(YEAR, @fecha, GETDATE())
+
+    -- Obtener el índice del rango de fechas
+    SELECT @RangoEtario = RE.rango_etario_id
+    FROM GAME_OF_JOINS.BI_D_RangoEtario RE
+    WHERE @edad BETWEEN RE.rango_etario_desde AND RE.rango_etario_hasta
+
+    RETURN @RangoEtario
+END;
+GO
+
+INSERT INTO GAME_OF_JOINS.BI_D_Tiempo
+SELECT DISTINCT DATEPART(YEAR, reclamo_fecha_hora_creacion) AS YEAR, DATEPART(MONTH, reclamo_fecha_hora_creacion) AS MONTH FROM GAME_OF_JOINS.Reclamo R
+UNION
+SELECT DISTINCT DATEPART(YEAR, P.pedido_fecha_hora) AS YEAR, DATEPART(MONTH, P.pedido_fecha_hora) AS MONTH FROM GAME_OF_JOINS.Pedido P
+UNION
+SELECT DISTINCT DATEPART(YEAR, S.servicio_mensajeria_fecha_solicitud) AS YEAR, DATEPART(MONTH, S.servicio_mensajeria_fecha_solicitud) AS MONTH FROM GAME_OF_JOINS.ServicioMensajeria S 
+ORDER BY YEAR,MONTH 
+
 INSERT INTO GAME_OF_JOINS.BI_D_Dias
-	select TOP 1 'LUNES' from sys.tables
+	select TOP 1 'Monday' from sys.tables
 	UNION
-	select TOP 1 'MARTES' from sys.tables
+	select TOP 1 'Tuesday' from sys.tables
 	UNION
-	select TOP 1 'MIERCOLES' from sys.tables
+	select TOP 1 'Wednesday' from sys.tables
 	UNION
-	select TOP 1 'JUEVES' from sys.tables
+	select TOP 1 'Thursday' from sys.tables
 	UNION
-	select TOP 1 'VIERNES' from sys.tables
+	select TOP 1 'Friday' from sys.tables
 	UNION
-	select TOP 1 'SABADO' from sys.tables
+	select TOP 1 'Saturday' from sys.tables
 	UNION
-	select TOP 1 'DOMINGO' from sys.tables;
+	select TOP 1 'Sunday' from sys.tables;
 	
 INSERT INTO GAME_OF_JOINS.BI_D_Categoria
 	select categoria from GAME_OF_JOINS.Categoria
@@ -202,7 +248,6 @@ INSERT INTO GAME_OF_JOINS.BI_D_Categoria
 	union
 	select TOP 1 'CATEGORIA4' from sys.tables
 
-
 INSERT INTO GAME_OF_JOINS.BI_D_RangoEtario
 	SELECT TOP 1 0, 25 from sys.tables
 	UNION
@@ -210,25 +255,24 @@ INSERT INTO GAME_OF_JOINS.BI_D_RangoEtario
 	UNION
 	SELECT TOP 1 36, 55 from sys.tables
 	UNION
-	SELECT TOP 1 56, 100 from sys.tables
-
+	SELECT TOP 1 56, 200 from sys.tables
 
 INSERT INTO GAME_OF_JOINS.BI_D_RangoHorario
-	select top 1 '08:00', '09:59' from sys.tables
+	select top 1 '08:00 - 09:59' from sys.tables
 	UNION
-	select top 1 '10:00', '11:59' from sys.tables
+	select top 1 '10:00 - 11:59' from sys.tables
 	UNION
-	select top 1 '12:00', '13:59' from sys.tables
+	select top 1 '12:00 - 13:59' from sys.tables
 	UNION
-	select top 1 '14:00', '15:59' from sys.tables
+	select top 1 '14:00 - 15:59' from sys.tables
 	UNION
-	select top 1 '16:00', '17:59' from sys.tables
+	select top 1 '16:00 - 17:59' from sys.tables
 	UNION
-	select top 1 '18:00', '19:59' from sys.tables
+	select top 1 '18:00 - 19:59' from sys.tables
 	UNION
-	select top 1 '20:00', '21:59' from sys.tables
+	select top 1 '20:00 - 21:59' from sys.tables
 	UNION
-	select top 1 '22:00', '23:59' from sys.tables
+	select top 1 '22:00 - 23:59' from sys.tables
 
 INSERT INTO GAME_OF_JOINS.BI_D_TipoLocal
 	select local_tipo from GAME_OF_JOINS.LocalTipo
@@ -237,21 +281,62 @@ INSERT INTO GAME_OF_JOINS.BI_D_Local
 	SELECT local_nombre, local_tipo_id, (SELECT TOP 1 categoria_id FROM GAME_OF_JOINS.BI_D_Categoria ORDER BY NEWID()) FROM
 	GAME_OF_JOINS.LocalRegistrado
 
-CREATE TABLE GAME_OF_JOINS.BI_H_Reclamo (
-	reclamo_anio int not null,
-	reclamo_mes int not null, 
-	reclamo_dia int not null,
-	reclamo_rango_horario int not null,
-	reclamo_local int not null,
-	reclamo_rango_etario_op int not null,
-	reclamo_tiempo_resolucion int not null,
-	reclamo_monto_cupon int not null
-);
+INSERT INTO GAME_OF_JOINS.BI_D_OperadorReclamo (operador_id, operador_dni, operador_nombre, operador_apellido, operador_fecha_nacimiento)
+	SELECT operador_id, operador_dni, operador_nombre, operador_apellido, operador_fecha_nacimiento FROM GAME_OF_JOINS.OperadorReclamo
 
-SELECT * FROM GAME_OF_JOINS.Reclamo R 
+INSERT INTO GAME_OF_JOINS.BI_H_Reclamo
+SELECT TI.tiempo_id, DI.dia_id, RH.rango_horario_id, OP.operador_id, L.local_id, reclamo_fecha_hora_creacion, reclamo_fecha_hora_solucion
+FROM GAME_OF_JOINS.Reclamo R
+JOIN GAME_OF_JOINS.BI_D_Tiempo TI ON TI.anio = DATEPART(YEAR, R.reclamo_fecha_hora_creacion) AND TI.mes = DATEPART(MONTH, R.reclamo_fecha_hora_creacion)
+JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia = DATENAME(WEEKDAY, R.reclamo_fecha_hora_creacion)
+JOIN GAME_OF_JOINS.BI_D_RangoHorario RH ON RH.rango_horario = GAME_OF_JOINS.GetRangoHorario(R.reclamo_fecha_hora_creacion)
+JOIN GAME_OF_JOINS.BI_D_OperadorReclamo OP ON OP.operador_id = R.reclamo_operador
+INNER JOIN GAME_OF_JOINS.Pedido P ON R.reclamo_pedido = P.pedido_nro
+JOIN GAME_OF_JOINS.BI_D_Local L ON P.pedido_local_id = L.local_id
 
-SELECT YEAR(reclamo_fecha_hora_creacion) AS ANIO, MONTH(reclamo_fecha_hora_creacion) AS MES, DATENAME(WEEKDAY, reclamo_fecha_hora_creacion) AS DIA FROM GAME_OF_JOINS.Reclamo R 
+GO
 
-select R.*, C.cupon_monto_descuento from GAME_OF_JOINS.Reclamo R INNER JOIN GAME_OF_JOINS.CuponReclamo CR ON R.reclamo_nro = CR.reclamo_nro INNER JOIN GAME_OF_JOINS.Cupon C ON C.cupon_nro = CR.cupon_nro
 
-SELECT * FROM gd_esquema.Maestra WHERE CUPON_MONTO > 0 AND RECLAMO_NRO IS NOT NULL
+
+
+
+-- CREATE VIEWS
+
+CREATE VIEW GAME_OF_JOINS.BI_V_RECLAMOS_MENSUALES AS (
+	SELECT 
+	(SELECT TOP 1 local_nombre FROM GAME_OF_JOINS.BI_D_Local WHERE local_id = R.reclamo_local_id) as LOCAL,
+	(SELECT TOP 1 mes FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = R.reclamo_tiempo_id) AS MES,
+	(SELECT dia FROM GAME_OF_JOINS.BI_D_Dias WHERE dia_id = R.reclamo_dia_semana_id) AS DIA_SEMANA, 
+	(SELECT rango_horario FROM GAME_OF_JOINS.BI_D_RangoHorario WHERE rango_horario_id = R.reclamo_rango_horario_id) AS RANGO_HORARIO,
+	 COUNT(1) AS TOTAL_PEDIDOS 
+	FROM GAME_OF_JOINS.BI_H_Reclamo R 
+	GROUP BY reclamo_tiempo_id, R.reclamo_local_id, R.reclamo_dia_semana_id, R.reclamo_rango_horario_id
+	) GO
+
+
+	CREATE VIEW GAME_OF_JOINS.BI_V_TIEMPO_RESOLUCION_RECLAMOS AS (
+	SELECT
+		(SELECT TOP 1 mes FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = R.reclamo_tiempo_id) AS MES,
+		(SELECT TOP 1 operador_nombre + ' ' + operador_apellido  FROM GAME_OF_JOINS.BI_D_OperadorReclamo OP WHERE operador_id = R.reclamo_operador_id) AS OPERADOR,
+		(SELECT TOP 1 GAME_OF_JOINS.GetRangoEtario(operador_fecha_nacimiento) FROM GAME_OF_JOINS.BI_D_OperadorReclamo WHERE operador_id = R.reclamo_operador_id) AS RANGO_ETARIO,
+		COUNT(1) AS TOTAL_PEDIDOS,
+		AVG(DATEDIFF(MINUTE, R.reclamo_fecha_creacion, R.reclamo_fecha_solucion)) AS PROMEDIO_RESOLUCION
+	FROM GAME_OF_JOINS.BI_H_RECLAMO R
+	GROUP BY reclamo_tiempo_id, reclamo_operador_id
+)
+GO
+
+
+
+/*
+
+
+
+
+Tiempo promedio de resolución de reclamos mensual según cada tipo de reclamo y rango etario de los operadores.
+El tiempo de resolución debe calcularse en minutos y representa la diferencia entre la fecha/hora en que se realizó el reclamo y la fecha/hora que se resolvió.
+
+
+Cantidad de reclamos mensuales recibidos por cada local en función del día de la semana y rango horario.
+
+ */
