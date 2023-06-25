@@ -642,11 +642,31 @@ SELECT(
 	INNER JOIN GAME_OF_JOINS.BI_D_Local L ON L.local_id = P.pedido_local_id
 	Join GAME_OF_JOINS.BI_D_Tiempo T on P.pedido_tiempo_id = T.tiempo_id 
 	GROUP BY P.pedido_localidad_id, L.tipo_local_id, DS.dia, FH.rango_horario, T.anio, T.mes
-	ORDER BY count(distinct(P.pedido_nro)) desc --rompe por el order by
+	ORDER BY count(distinct(P.pedido_nro)) desc -- ROMPE POR EL ORDER BY 
 	)
 	-- FALTA SACAR EL TOP 1 DE LA MAYOR CANTIDAD DE PEDIDOS DE CADA DE MES DE CADA AÑO (por localidad y tipo local)
 )
 GO
+
+
+/*              VISTAS PENDIENTES
+
+CREATE VIEW GAME_OF_JOINS.BI_V_DESVIO_PROMEDIO_ENTREGA_POR_MOVILIDAD AS ()
+Desvío promedio en tiempo de entrega según el tipo de movilidad, el día
+de la semana y la franja horaria.
+
+CREATE VIEW GAME_OF_JOINS.BI_V_PORCENTAJE_PEDIDOS_MENSUALES AS ()
+Porcentaje de pedidos y mensajería entregados mensualmente según el
+rango etario de los repartidores y la localidad.
+Este indicador se debe tener en cuenta y sumar tanto los envíos de pedidos
+como los de mensajería.
+
+CREATE VIEW GAME_OF_JOINS.BI_V_PROMEDIO_MENSUAL_VALOR_ASEGURADO AS ()
+Promedio mensual del valor asegurado (valor declarado por el usuario) de
+los paquetes enviados a través del servicio de mensajería en función del
+tipo de paquete.
+
+*/
 
 
 
