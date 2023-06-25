@@ -230,6 +230,9 @@ CREATE TABLE GAME_OF_JOINS.BI_H_Pedido (
 	pedido_usuario_dni decimal(18,0) not null REFERENCES GAME_OF_JOINS.BI_D_Usuario(usuario_dni),
 	pedido_local_id int not null REFERENCES GAME_OF_JOINS.BI_D_Local(local_id),
 	pedido_repartidor_dni decimal(18,0) not null REFERENCES GAME_OF_JOINS.BI_D_Repartidor(repartidor_dni), 
+	pedido_fecha datetime2(3) not null, -- fecha y hora en la que se registró el pedido
+	pedido_fecha_entrega datetime2(3) not null, -- fecha y hora en la que se entregó el pedido
+	pedido_tiempo_estimado_entrega decimal(18,2) not null, 
 	pedido_estado_id int not null REFERENCES GAME_OF_JOINS.BI_D_EstadoPedido(estado_pedido_id),
 	pedido_tipo_medio_pago_id int not null REFERENCES GAME_OF_JOINS.BI_D_TipoMedioDePago(tipo_medio_pago_id),
 	pedido_tiempo_id int not null REFERENCES GAME_OF_JOINS.BI_D_Tiempo(tiempo_id),
@@ -461,8 +464,8 @@ INSERT INTO GAME_OF_JOINS.BI_H_Reclamo
 GO
 
 
-INSERT INTO GAME_OF_JOINS.BI_H_Pedido (pedido_nro, pedido_usuario_dni, pedido_local_id, pedido_repartidor_dni, pedido_estado_id, pedido_tipo_medio_pago_id, pedido_tiempo_id, pedido_localidad_id, pedido_dia_semana_id, pedido_rango_horario_id, pedido_cupon_monto, pedido_total, pedido_calificacion)
-	SELECT P.pedido_nro, U.Usuario_dni, L.local_id, P.pedido_repartidor_dni, P.pedido_estado_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, P.pedido_total_cupones, P.pedido_total_servicio, P.pedido_calificacion
+INSERT INTO GAME_OF_JOINS.BI_H_Pedido (pedido_nro, pedido_usuario_dni, pedido_local_id, pedido_repartidor_dni, pedido_fecha, pedido_fecha_entrega, pedido_tiempo_estimado_entrega, pedido_estado_id, pedido_tipo_medio_pago_id, pedido_tiempo_id, pedido_localidad_id, pedido_dia_semana_id, pedido_rango_horario_id, pedido_cupon_monto, pedido_total, pedido_calificacion)
+	SELECT P.pedido_nro, U.Usuario_dni, L.local_id, P.pedido_repartidor_dni, P.pedido_fecha_hora, P.pedido_fecha_hora_entrega, P.pedido_tiempo_entrega_estimada, P.pedido_estado_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, P.pedido_total_cupones, P.pedido_total_servicio, P.pedido_calificacion
 	FROM GAME_OF_JOINS.Pedido P
 	JOIN GAME_OF_JOINS.MedioDePago MP ON P.pedido_medio_pago_id = MP.medio_pago_id
 	INNER JOIN GAME_OF_JOINS.DireccionUsuario DU ON DU.direccion_usuario_id = P.pedido_direccion_usuario_id
