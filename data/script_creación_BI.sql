@@ -47,6 +47,12 @@ IF EXISTS (SELECT 1 FROM sys.all_views where name = 'BI_V_MONTO_MENSUAL_CUPONES'
 
 IF EXISTS (SELECT 1 FROM sys.all_views where name = 'BI_V_CUPONES_USUARIO')
 	DROP VIEW GAME_OF_JOINS.BI_V_CUPONES_USUARIO		
+
+IF EXISTS (SELECT 1 FROM sys.all_views where name = 'BI_V_CALIFICACION_LOCAL')
+	DROP VIEW GAME_OF_JOINS.BI_V_CALIFICACION_LOCAL		
+
+IF EXISTS (SELECT 1 FROM sys.all_views where name = 'BI_V_MONTO_PEDIDO_LOCALIDAD')
+	DROP VIEW GAME_OF_JOINS.BI_V_MONTO_PEDIDO_LOCALIDAD
 	
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_H_Pedido')
     DROP TABLE GAME_OF_JOINS.BI_H_Pedido;
@@ -224,9 +230,12 @@ CREATE TABLE GAME_OF_JOINS.BI_H_Pedido (
 	pedido_estado_id int not null REFERENCES GAME_OF_JOINS.BI_D_EstadoPedido(estado_pedido_id),
 	pedido_tipo_medio_pago_id int not null REFERENCES GAME_OF_JOINS.BI_D_TipoMedioDePago(tipo_medio_pago_id),
 	pedido_tiempo_id int not null REFERENCES GAME_OF_JOINS.BI_D_Tiempo(tiempo_id),
+	pedido_localidad_id int not null REFERENCES GAME_OF_JOINS.BI_D_Localidad(localidad_id),
 	pedido_dia_semana_id int not null REFERENCES GAME_OF_JOINS.BI_D_Dias(dia_id),
 	pedido_rango_horario_id int not null REFERENCES GAME_OF_JOINS.BI_D_RangoHorario(rango_horario_id),
-	pedido_cupon_monto DECIMAL(18,2)
+	pedido_cupon_monto DECIMAL(18,2),
+	pedido_total DECIMAL(18,2),
+	pedido_calificacion int
 );
 
 ALTER TABLE GAME_OF_JOINS.BI_H_Pedido
@@ -238,6 +247,7 @@ ADD CONSTRAINT PK_BI_H_Pedido PRIMARY KEY
 	pedido_repartidor_dni,
 	pedido_tipo_medio_pago_id,
 	pedido_tiempo_id,
+	pedido_localidad_id,
 	pedido_dia_semana_id,
 	pedido_rango_horario_id
 );
@@ -448,10 +458,12 @@ INSERT INTO GAME_OF_JOINS.BI_H_Reclamo
 GO
 
 
-INSERT INTO GAME_OF_JOINS.BI_H_Pedido (pedido_nro, pedido_usuario_dni, pedido_local_id, pedido_repartidor_dni, pedido_estado_id, pedido_tipo_medio_pago_id, pedido_tiempo_id, pedido_dia_semana_id, pedido_rango_horario_id, pedido_cupon_monto)
-	SELECT P.pedido_nro, U.Usuario_dni, L.local_id, P.pedido_repartidor_dni, P.pedido_estado_id, TMP.tipo_medio_pago_id, TI.tiempo_id, DI.dia_id, RH.rango_horario_id, P.pedido_total_cupones
+INSERT INTO GAME_OF_JOINS.BI_H_Pedido (pedido_nro, pedido_usuario_dni, pedido_local_id, pedido_repartidor_dni, pedido_estado_id, pedido_tipo_medio_pago_id, pedido_tiempo_id, pedido_localidad_id, pedido_dia_semana_id, pedido_rango_horario_id, pedido_cupon_monto, pedido_total, pedido_calificacion)
+	SELECT P.pedido_nro, U.Usuario_dni, L.local_id, P.pedido_repartidor_dni, P.pedido_estado_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, P.pedido_total_cupones, P.pedido_total_servicio, P.pedido_calificacion
 	FROM GAME_OF_JOINS.Pedido P
 	JOIN GAME_OF_JOINS.MedioDePago MP ON P.pedido_medio_pago_id = MP.medio_pago_id
+	INNER JOIN GAME_OF_JOINS.DireccionUsuario DU ON DU.direccion_usuario_id = P.pedido_direccion_usuario_id
+	INNER JOIN GAME_OF_JOINS.BI_D_Localidad LO ON LO.localidad_id = DU.direccion_usuario_localidad
 	INNER JOIN GAME_OF_JOINS.BI_D_TipoMedioDePago TMP ON TMP.tipo_medio_pago_id = MP.tipo_medio_pago_id
 	INNER JOIN GAME_OF_JOINS.BI_D_Tiempo TI ON TI.anio = DATEPART(YEAR, P.pedido_fecha_hora) AND TI.mes = DATEPART(MONTH, P.pedido_fecha_hora)
 	INNER JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia = DATENAME(WEEKDAY, P.pedido_fecha_hora)
@@ -507,12 +519,34 @@ CREATE VIEW GAME_OF_JOINS.BI_V_CUPONES_USUARIO AS (
 	SELECT 
 		(SELECT anio FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = P.pedido_tiempo_id) AS ANIO,
 		(SELECT mes FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = P.pedido_tiempo_id) AS MES, 
-		(SELECT rango_etario_id from GAME_OF_JOINS.BI_D_RangoEtario RE WHERE RE.rango_etario_id = U.usuario_rango_etario) AS RANGO_ETARIO,
+		(SELECT rango_etario_id from GAME_OF_JOINS.BI_D_RangoEtario RE WHERE RE.rango_etario_id = U.usuario_rango_etario) AS RANGO_ETARIO_USUARIO,
 		SUM(P.pedido_cupon_monto) AS MONTO_TOTAL
 		FROM 
 		GAME_OF_JOINS.BI_H_Pedido P
 		INNER JOIN GAME_OF_JOINS.BI_D_Usuario U ON P.pedido_usuario_dni = U.usuario_dni 
 		GROUP BY U.usuario_rango_etario, P.pedido_tiempo_id
+)
+GO
+
+CREATE VIEW GAME_OF_JOINS.BI_V_CALIFICACION_LOCAL AS (
+	SELECT 
+		(SELECT anio FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = P.pedido_tiempo_id) AS ANIO,
+		(SELECT mes FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = P.pedido_tiempo_id) AS MES, 
+		(SELECT local_nombre FROM GAME_OF_JOINS.BI_D_Local WHERE local_id = P.pedido_local_id) AS LOCAL,
+		CAST(AVG(CAST(P.pedido_calificacion AS DECIMAL(2,1))) AS DECIMAL(2,1)) AS CALIFICACION_PROMEDIO
+		FROM GAME_OF_JOINS.BI_H_Pedido P
+		GROUP BY P.pedido_tiempo_id, P.pedido_local_id
+)
+GO
+
+CREATE VIEW GAME_OF_JOINS.BI_V_MONTO_PEDIDO_LOCALIDAD AS (
+	SELECT 
+		(SELECT anio FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = P.pedido_tiempo_id) AS ANIO,
+		(SELECT mes FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = P.pedido_tiempo_id) AS MES, 
+		(SELECT localidad FROM GAME_OF_JOINS.BI_D_Localidad WHERE localidad_id = P.pedido_localidad_id) AS LOCALIDAD,
+		AVG(P.pedido_total) AS MONTO_PROMEDIO
+		FROM GAME_OF_JOINS.BI_H_Pedido P
+		GROUP BY P.pedido_tiempo_id, P.pedido_localidad_id
 )
 GO
 
@@ -528,3 +562,9 @@ SELECT * FROM GAME_OF_JOINS.BI_V_MONTO_MENSUAL_CUPONES
 
 --Monto total de los cupones utilizados por mes en función del rango etario de los usuarios. (PODEMOS ASUMIR QUE AL SER CUPONES UTILIZADOS Y NO GENERADOS, LA FECHA A ANALIZAR ES LA DE LA CREACION DEL PEDIDO)
 SELECT * FROM GAME_OF_JOINS.BI_V_CUPONES_USUARIO
+
+--Promedio de cali?cación mensual por local.
+SELECT * FROM GAME_OF_JOINS.BI_V_CALIFICACION_LOCAL
+
+--Valor promedio mensual que tienen los envíos de pedidos en cada localidad.
+SELECT * FROM GAME_OF_JOINS.BI_V_MONTO_PEDIDO_LOCALIDAD
