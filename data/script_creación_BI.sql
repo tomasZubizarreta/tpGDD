@@ -114,6 +114,12 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Movilidad')
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_TipoMedioDePago')
     DROP TABLE GAME_OF_JOINS.BI_D_TipoMedioDePago;
 
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_EstadoEnvio')
+	DROP TABLE GAME_OF_JOINS.BI_D_EstadoEnvio
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Paquete')
+	DROP TABLE GAME_OF_JOINS.BI_D_Paquete
+
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Localidad')
     DROP TABLE GAME_OF_JOINS.BI_D_Localidad;
 
@@ -228,6 +234,16 @@ CREATE TABLE GAME_OF_JOINS.BI_D_TipoMedioDePago(
 	tipo_medio_pago nvarchar(50) NULL
 );
 
+CREATE TABLE GAME_OF_JOINS.BI_D_EstadoEnvio(
+	estado_envio_id int not null PRIMARY KEY,
+	estado_envio nvarchar(50)
+);
+
+CREATE TABLE GAME_OF_JOINS.BI_D_Paquete(
+	paquete_id int not null PRIMARY KEY,
+	paquete_tipo_paquete nvarchar(50)
+);
+
 CREATE TABLE GAME_OF_JOINS.BI_H_Pedido (
 	pedido_nro decimal(18,0) not null,
 	pedido_usuario_dni decimal(18,0) not null REFERENCES GAME_OF_JOINS.BI_D_Usuario(usuario_dni),
@@ -264,14 +280,18 @@ ADD CONSTRAINT PK_BI_H_Pedido PRIMARY KEY
 CREATE TABLE GAME_OF_JOINS.BI_H_EnvioMensajeria (
 	envio_nro DECIMAL(18,0) not null,
 	envio_usuario_id decimal(18,0) not null REFERENCES GAME_OF_JOINS.BI_D_Usuario(usuario_dni),
+	envio_paquete_id int not null REFERENCES GAME_OF_JOINS.BI_D_Paquete(paquete_id),
+	envio_valor_asegurado decimal(18,2),
+	envio_estado_id int not null REFERENCES GAME_OF_JOINS.BI_D_EstadoEnvio(estado_envio_id),	
 	envio_tiempo_id int not null REFERENCES GAME_OF_JOINS.BI_D_Tiempo(tiempo_id),
 	envio_dia_semana_id int not null REFERENCES GAME_OF_JOINS.BI_D_Dias(dia_id),
-	envio_rango_horario_id int not null  REFERENCES GAME_OF_JOINS.BI_D_RangoHorario(rango_horario_id),
+	envio_rango_horario_id int not null REFERENCES GAME_OF_JOINS.BI_D_RangoHorario(rango_horario_id),
+	envio_fecha datetime not null,
+	envio_fecha_entrega datetime not null,
 	envio_repartidor_id decimal(18,0) not null REFERENCES GAME_OF_JOINS.BI_D_Repartidor(repartidor_dni),
 	envio_localidad_id int not null REFERENCES GAME_OF_JOINS.BI_D_Localidad(localidad_id),
-	envio_provincia_id int not null REFERENCES GAME_OF_JOINS.BI_D_Provincia(provincia_id),
-	envio_fecha datetime not null,
-	envio_fecha_entrega datetime not null
+	envio_provincia_id int not null REFERENCES GAME_OF_JOINS.BI_D_Provincia(provincia_id)
+
 );
 
 ALTER TABLE GAME_OF_JOINS.BI_H_EnvioMensajeria
@@ -279,12 +299,15 @@ ADD CONSTRAINT PK_BI_H_EnvioMensajeria PRIMARY KEY
 (	
 	envio_nro,
 	envio_usuario_id,
+	envio_paquete_id,
+	envio_estado_id,
 	envio_tiempo_id,
 	envio_dia_semana_id,
 	envio_rango_horario_id,
 	envio_repartidor_id,
 	envio_localidad_id,
-	envio_provincia_id
+	envio_provincia_id,
+	envio_estado_id
 )
 
 
@@ -466,6 +489,12 @@ INSERT INTO GAME_OF_JOINS.BI_D_Repartidor (repartidor_dni, repartidor_movilidad,
 INSERT INTO GAME_OF_JOINS.BI_D_TipoMedioDePago
 	SELECT tipo_medio_pago FROM GAME_OF_JOINS.TipoMedioDePago
 
+INSERT INTO GAME_OF_JOINS.BI_D_EstadoEnvio
+	SELECT E.estado_envio_id, E.estado FROM GAME_OF_JOINS.EstadoEnvio E
+
+INSERT INTO GAME_OF_JOINS.BI_D_Paquete
+	SELECT P.paquete_id, P.paquete_tipo FROM GAME_OF_JOINS.Paquete P
+
 INSERT INTO GAME_OF_JOINS.BI_D_Usuario
 	SELECT usuario_dni, GAME_OF_JOINS.GetRangoEtario(usuario_fecha_nacimiento) FROM GAME_OF_JOINS.Usuario
 
@@ -507,8 +536,8 @@ INSERT INTO GAME_OF_JOINS.BI_H_Pedido (pedido_nro, pedido_usuario_dni, pedido_lo
 	JOIN GAME_OF_JOINS.BI_D_Local L ON P.pedido_local_id = L.local_id
 GO
 
-INSERT INTO GAME_OF_JOINS.BI_H_EnvioMensajeria(envio_nro, envio_usuario_id, envio_tiempo_id, envio_dia_semana_id, envio_rango_horario_id, envio_repartidor_id, envio_localidad_id, envio_provincia_id, envio_fecha, envio_fecha_entrega)
-	SELECT S.servicio_mensajeria_nro, U.usuario_dni, TI.tiempo_id, DI.dia_id, RH.rango_horario_id, R.repartidor_dni, LO.localidad_id, PR.provincia_id, S.servicio_mensajeria_fecha_solicitud, S.servicio_mensajeria_fecha_finalizacion
+INSERT INTO GAME_OF_JOINS.BI_H_EnvioMensajeria(envio_nro, envio_usuario_id, envio_paquete_id, envio_tiempo_id, envio_dia_semana_id, envio_rango_horario_id, envio_repartidor_id, envio_localidad_id, envio_provincia_id, envio_fecha, envio_fecha_entrega, envio_estado_id, envio_valor_asegurado)
+	SELECT S.servicio_mensajeria_nro, U.usuario_dni, S.servicio_mensajeria_paquete, TI.tiempo_id, DI.dia_id, RH.rango_horario_id, R.repartidor_dni, LO.localidad_id, PR.provincia_id, S.servicio_mensajeria_fecha_solicitud, S.servicio_mensajeria_fecha_finalizacion, S.servicio_mensajeria_estado_id, S.servicio_mensajeria_valor_asegurado
 	FROM GAME_OF_JOINS.ServicioMensajeria S
 	INNER JOIN GAME_OF_JOINS.BI_D_Usuario U ON U.usuario_dni = S.servicio_mensajeria_usuario
 	INNER JOIN GAME_OF_JOINS.BI_D_Localidad LO ON LO.localidad_id = S.servicio_mensajeria_localidad
