@@ -60,6 +60,9 @@ IF EXISTS (SELECT 1 FROM sys.all_views where name = 'BI_V_MONTO_PEDIDO_LOCALIDAD
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_H_Pedido')
     DROP TABLE GAME_OF_JOINS.BI_H_Pedido;
 
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_H_EnvioMensajeria')
+    DROP TABLE GAME_OF_JOINS.BI_H_EnvioMensajeria;
+
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_H_Reclamo')
     DROP TABLE GAME_OF_JOINS.BI_H_Reclamo;
 
@@ -257,6 +260,33 @@ ADD CONSTRAINT PK_BI_H_Pedido PRIMARY KEY
 	pedido_dia_semana_id,
 	pedido_rango_horario_id
 );
+
+CREATE TABLE GAME_OF_JOINS.BI_H_EnvioMensajeria (
+	envio_nro DECIMAL(18,0) not null,
+	envio_usuario_id decimal(18,0) not null REFERENCES GAME_OF_JOINS.BI_D_Usuario(usuario_dni),
+	envio_tiempo_id int not null REFERENCES GAME_OF_JOINS.BI_D_Tiempo(tiempo_id),
+	envio_dia_semana_id int not null REFERENCES GAME_OF_JOINS.BI_D_Dias(dia_id),
+	envio_rango_horario_id int not null  REFERENCES GAME_OF_JOINS.BI_D_RangoHorario(rango_horario_id),
+	envio_repartidor_id decimal(18,0) not null REFERENCES GAME_OF_JOINS.BI_D_Repartidor(repartidor_dni),
+	envio_localidad_id int not null REFERENCES GAME_OF_JOINS.BI_D_Localidad(localidad_id),
+	envio_provincia_id int not null REFERENCES GAME_OF_JOINS.BI_D_Provincia(provincia_id),
+	envio_fecha datetime not null,
+	envio_fecha_entrega datetime not null
+);
+
+ALTER TABLE GAME_OF_JOINS.BI_H_EnvioMensajeria
+ADD CONSTRAINT PK_BI_H_EnvioMensajeria PRIMARY KEY 
+(	
+	envio_nro,
+	envio_usuario_id,
+	envio_tiempo_id,
+	envio_dia_semana_id,
+	envio_rango_horario_id,
+	envio_repartidor_id,
+	envio_localidad_id,
+	envio_provincia_id
+)
+
 
 CREATE TABLE GAME_OF_JOINS.BI_H_Reclamo (
 	reclamo_nro DECIMAL(18,0) not null,
@@ -463,7 +493,6 @@ INSERT INTO GAME_OF_JOINS.BI_H_Reclamo
 	JOIN GAME_OF_JOINS.BI_D_Local L ON P.pedido_local_id = L.local_id
 GO
 
-
 INSERT INTO GAME_OF_JOINS.BI_H_Pedido (pedido_nro, pedido_usuario_dni, pedido_local_id, pedido_repartidor_dni, pedido_fecha, pedido_fecha_entrega, pedido_tiempo_estimado_entrega, pedido_estado_id, pedido_tipo_medio_pago_id, pedido_tiempo_id, pedido_localidad_id, pedido_dia_semana_id, pedido_rango_horario_id, pedido_cupon_monto, pedido_total, pedido_calificacion)
 	SELECT P.pedido_nro, U.Usuario_dni, L.local_id, P.pedido_repartidor_dni, P.pedido_fecha_hora, P.pedido_fecha_hora_entrega, P.pedido_tiempo_entrega_estimada, P.pedido_estado_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, P.pedido_total_cupones, P.pedido_total_servicio, P.pedido_calificacion
 	FROM GAME_OF_JOINS.Pedido P
@@ -476,6 +505,18 @@ INSERT INTO GAME_OF_JOINS.BI_H_Pedido (pedido_nro, pedido_usuario_dni, pedido_lo
 	INNER JOIN GAME_OF_JOINS.BI_D_RangoHorario RH ON RH.rango_horario = GAME_OF_JOINS.GetRangoHorario(P.pedido_fecha_hora)
 	JOIN GAME_OF_JOINS.BI_D_Usuario U ON P.pedido_usuario_dni = U.Usuario_dni
 	JOIN GAME_OF_JOINS.BI_D_Local L ON P.pedido_local_id = L.local_id
+GO
+
+INSERT INTO GAME_OF_JOINS.BI_H_EnvioMensajeria(envio_nro, envio_usuario_id, envio_tiempo_id, envio_dia_semana_id, envio_rango_horario_id, envio_repartidor_id, envio_localidad_id, envio_provincia_id, envio_fecha, envio_fecha_entrega)
+	SELECT S.servicio_mensajeria_nro, U.usuario_dni, TI.tiempo_id, DI.dia_id, RH.rango_horario_id, R.repartidor_dni, LO.localidad_id, PR.provincia_id, S.servicio_mensajeria_fecha_solicitud, S.servicio_mensajeria_fecha_finalizacion
+	FROM GAME_OF_JOINS.ServicioMensajeria S
+	INNER JOIN GAME_OF_JOINS.BI_D_Usuario U ON U.usuario_dni = S.servicio_mensajeria_usuario
+	INNER JOIN GAME_OF_JOINS.BI_D_Localidad LO ON LO.localidad_id = S.servicio_mensajeria_localidad
+	INNER JOIN GAME_OF_JOINS.BI_D_Provincia PR ON PR.provincia_id = S.servicio_mensajeria_provincia
+	JOIN GAME_OF_JOINS.BI_D_Repartidor R ON R.repartidor_dni = S.servicio_mensajeria_repartidor
+	INNER JOIN GAME_OF_JOINS.BI_D_Tiempo TI ON TI.anio = DATEPART(YEAR, S.servicio_mensajeria_fecha_solicitud) AND TI.mes = DATEPART(MONTH, S.servicio_mensajeria_fecha_solicitud)
+	INNER JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia = DATENAME(WEEKDAY, S.servicio_mensajeria_fecha_solicitud)
+	INNER JOIN GAME_OF_JOINS.BI_D_RangoHorario RH ON RH.rango_horario = GAME_OF_JOINS.GetRangoHorario(S.servicio_mensajeria_fecha_solicitud)
 GO
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
