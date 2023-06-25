@@ -36,6 +36,9 @@ Estados reclamos
 USE GD1C2023
 GO
 
+IF EXISTS (SELECT 1 FROM sys.all_views where name = 'BI_V_MAYOR_CANTIDAD_PEDIDOS')
+	DROP VIEW GAME_OF_JOINS.BI_V_MAYOR_CANTIDAD_PEDIDOS
+
 IF EXISTS (SELECT 1 FROM sys.all_views where name = 'BI_V_RECLAMOS_MENSUALES')
 	DROP VIEW GAME_OF_JOINS.BI_V_RECLAMOS_MENSUALES
 
@@ -549,6 +552,34 @@ CREATE VIEW GAME_OF_JOINS.BI_V_MONTO_PEDIDO_LOCALIDAD AS (
 		GROUP BY P.pedido_tiempo_id, P.pedido_localidad_id
 )
 GO
+
+/*
+
+IF EXISTS (SELECT 1 FROM sys.all_views where name = 'BI_V_MAYOR_CANTIDAD_PEDIDOS')
+	DROP VIEW GAME_OF_JOINS.BI_V_MAYOR_CANTIDAD_PEDIDOS
+
+*/
+
+CREATE VIEW GAME_OF_JOINS.BI_V_MAYOR_CANTIDAD_PEDIDOS AS (
+SELECT(
+	SELECT T.anio, T.mes, DS.dia, FH.rango_horario, L.tipo_local_id, p.pedido_localidad_id, count(distinct(P.pedido_nro)) as cantidad_pedidos_registrados
+	FROM GAME_OF_JOINS.BI_H_Pedido P
+	JOIN GAME_OF_JOINS.BI_D_Dias DS ON DS.dia_id = P.pedido_dia_semana_id
+	INNER JOIN GAME_OF_JOINS.BI_D_RangoHorario FH ON FH.rango_horario_id = P.pedido_rango_horario_id
+	INNER JOIN GAME_OF_JOINS.BI_D_Local L ON L.local_id = P.pedido_local_id
+	Join GAME_OF_JOINS.BI_D_Tiempo T on P.pedido_tiempo_id = T.tiempo_id 
+	GROUP BY P.pedido_localidad_id, L.tipo_local_id, DS.dia, FH.rango_horario, T.anio, T.mes
+	ORDER BY count(distinct(P.pedido_nro)) desc --rompe por el order by
+	)
+	-- FALTA SACAR EL TOP 1 DE LA MAYOR CANTIDAD DE PEDIDOS DE CADA DE MES DE CADA AÑO (por localidad y tipo local)
+)
+GO
+
+
+
+-- Cantidad de pedidos realizados, agrupados por localidad y tipo de local ordenados segun dia y franja horaria de mayor demanda 
+SELECT * FROM GAME_OF_JOINS.BI_V_MAYOR_CANTIDAD_PEDIDOS
+
 
 --Cantidad de reclamos mensuales recibidos por cada local en función del día de la semana y rango horario.
 SELECT * FROM GAME_OF_JOINS.BI_V_RECLAMOS_MENSUALES
