@@ -411,19 +411,14 @@ SELECT DISTINCT DATEPART(YEAR, S.servicio_mensajeria_fecha_solicitud) AS YEAR, D
 ORDER BY YEAR,MONTH 
 
 INSERT INTO GAME_OF_JOINS.BI_D_Dias
-	select TOP 1 'Monday' from sys.tables
-	UNION
-	select TOP 1 'Tuesday' from sys.tables
-	UNION
-	select TOP 1 'Wednesday' from sys.tables
-	UNION
-	select TOP 1 'Thursday' from sys.tables
-	UNION
-	select TOP 1 'Friday' from sys.tables
-	UNION
-	select TOP 1 'Saturday' from sys.tables
-	UNION
-	select TOP 1 'Sunday' from sys.tables;
+	VALUES
+	('Monday'),
+	('Tuesday'),
+	('Wednesday'),
+	('Thursday'),
+	('Friday'),
+	('Saturday'),
+	('Sunday');
 	
 INSERT INTO GAME_OF_JOINS.BI_D_Categoria
 	select categoria from GAME_OF_JOINS.Categoria
