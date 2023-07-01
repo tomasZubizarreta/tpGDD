@@ -1,6 +1,7 @@
+--SELECT COUNT(*) FROM gd_esquema.Maestra
+
 USE GD1C2023
 GO
-
 
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'ServicioMensajeria')
     DROP TABLE GAME_OF_JOINS.ServicioMensajeria;
@@ -46,6 +47,9 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Categoria')
 
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'ProductoLocal')
     DROP TABLE GAME_OF_JOINS.ProductoLocal;
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'PedidoXProductoLocal')
+    DROP TABLE GAME_OF_JOINS.PedidoXProductoLocal;
 
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Movilidad')
     DROP TABLE GAME_OF_JOINS.Movilidad;
@@ -145,6 +149,8 @@ IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_provincia' AND sche
     DROP PROCEDURE GAME_OF_JOINS.migrar_provincia;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_tipo_reclamo' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
     DROP PROCEDURE GAME_OF_JOINS.migrar_tipo_reclamo;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_pedidoxproducto' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
+    DROP PROCEDURE GAME_OF_JOINS.migrar_pedidoxproducto;
 GO
 
 --------------------------- Creacion del schema --------------------------- 
@@ -302,7 +308,8 @@ CREATE TABLE GAME_OF_JOINS.AtencionLocal(
 );
 
 CREATE TABLE GAME_OF_JOINS.ProductoLocal(
-	producto_codigo nvarchar(50) PRIMARY KEY NOT NULL,
+	producto_id decimal(18,0) IDENTITY(1,1) PRIMARY KEY NOT NULL,
+	producto_codigo nvarchar(50) NOT NULL,
 	producto_nombre nvarchar(50) NULL,
 	producto_descripcion nvarchar(255) NULL,
 	producto_local int REFERENCES GAME_OF_JOINS.LocalRegistrado(local_id) NOT NULL,
@@ -349,6 +356,20 @@ CREATE TABLE GAME_OF_JOINS.Pedido(
 	pedido_calificacion decimal(18,0) NULL,
 	pedido_observaciones nvarchar(255) NULL
 );
+
+CREATE TABLE GAME_OF_JOINS.PedidoXProductoLocal(
+	pedido_nro decimal(18,0) NOT NULL,
+	producto_local_codigo decimal(18,0) NOT NULL,
+	producto_cantidad int
+);
+
+ALTER TABLE GAME_OF_JOINS.PedidoXProductoLocal
+ADD CONSTRAINT PK_PedidoXProductoLocal PRIMARY KEY 
+(
+	pedido_nro,
+	producto_local_codigo
+);
+
 
 CREATE TABLE GAME_OF_JOINS.Reclamo(
 	reclamo_nro decimal(18,0) PRIMARY KEY,
@@ -672,7 +693,8 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_local
 	DL.direccion_local_id,
 	LOCAL_DESCRIPCION
 	FROM [GD1C2023].[gd_esquema].[Maestra] M
-	INNER JOIN GAME_OF_JOINS.DireccionLocal DL ON DL.direccion_local_direccion = M.LOCAL_DIRECCION
+	INNER JOIN GAME_OF_JOINS.Localidad L ON L.localidad = M.LOCAL_LOCALIDAD
+	INNER JOIN GAME_OF_JOINS.DireccionLocal DL ON DL.direccion_local_direccion = M.LOCAL_DIRECCION AND DL.direccion_local_localidad_id = L.localidad_id
 	INNER JOIN GAME_OF_JOINS.LocalTipo LT ON M.LOCAL_TIPO = LT.local_tipo
 	WHERE LOCAL_NOMBRE IS NOT NULL
   END
@@ -754,6 +776,20 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_pedido
 	SET IDENTITY_INSERT GAME_OF_JOINS.Pedido OFF;
   END
  GO
+
+CREATE PROCEDURE GAME_OF_JOINS.migrar_pedidoxproducto
+AS
+	BEGIN
+		INSERT INTO GAME_OF_JOINS.PedidoXProductoLocal(pedido_nro, producto_local_codigo, producto_cantidad)
+		SELECT DISTINCT P.pedido_nro, PL.producto_id, SUM(M.PRODUCTO_CANTIDAD) 
+		FROM gd_esquema.Maestra M
+		INNER JOIN GAME_OF_JOINS.Pedido P ON M.PEDIDO_NRO = P.pedido_nro
+		INNER JOIN GAME_OF_JOINS.LocalRegistrado L ON M.LOCAL_NOMBRE + M.LOCAL_DESCRIPCION = L.local_nombre + L.local_descripcion
+		INNER JOIN GAME_OF_JOINS.ProductoLocal PL ON M.PRODUCTO_LOCAL_CODIGO = PL.producto_codigo AND PL.producto_local = L.local_id
+		WHERE M.PRODUCTO_LOCAL_CODIGO IS NOT NULL 
+		GROUP BY P.pedido_nro, PL.producto_id
+	END
+GO
 
 CREATE PROCEDURE GAME_OF_JOINS.migrar_provincia
 AS
@@ -840,6 +876,7 @@ EXEC GAME_OF_JOINS.migrar_operador_reclamo
 EXEC GAME_OF_JOINS.migrar_producto_local
 EXEC GAME_OF_JOINS.migrar_repartidor
 EXEC GAME_OF_JOINS.migrar_pedido
+EXEC GAME_OF_JOINS.migrar_pedidoxproducto
 EXEC GAME_OF_JOINS.migrar_reclamo 
 EXEC GAME_OF_JOINS.migrar_cupon_reclamo
 EXEC GAME_OF_JOINS.migrar_servicio_mensajeria
