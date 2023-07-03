@@ -391,7 +391,7 @@ BEGIN
 END;
 GO
 
-CREATE FUNCTION GAME_OF_JOINS.GetRangoEtario(@fecha DATE)
+/*CREATE FUNCTION GAME_OF_JOINS.GetRangoEtario(@fecha DATE)
 RETURNS NVARCHAR(50)
 AS
 BEGIN
@@ -412,7 +412,31 @@ BEGIN
     
     RETURN @rangoEtario
 END;
+GO*/
+
+CREATE FUNCTION GAME_OF_JOINS.GetRangoEtario(@fecha DATE)
+RETURNS INT
+AS
+BEGIN
+    DECLARE @rangoEtario INT
+
+    DECLARE @edad INT
+    SET @edad = DATEDIFF(YEAR, @fecha, GETDATE())
+
+    -- Determinar el rango etario
+    IF @edad < 25
+        SET @rangoEtario = 1
+    ELSE IF @edad >= 25 AND @edad <= 35
+        SET @rangoEtario = 2
+    ELSE IF @edad > 35 AND @edad <= 55
+        SET @rangoEtario = 3
+    ELSE
+        SET @rangoEtario = 4
+    
+    RETURN @rangoEtario
+END;
 GO
+
 
 
 
@@ -462,6 +486,7 @@ VALUES
     ('36 - 55'),
     ('56 - 200');
 
+
 INSERT INTO GAME_OF_JOINS.BI_D_RangoHorario
 VALUES
     ('08:00 - 09:59'),
@@ -495,17 +520,17 @@ INSERT INTO GAME_OF_JOINS.BI_D_EstadoEnvio
 INSERT INTO GAME_OF_JOINS.BI_D_Paquete
 	SELECT paquete_tipo, paquete_tipo_precio FROM GAME_OF_JOINS.Paquete P
 
---INSERT INTO GAME_OF_JOINS.BI_D_Movilidad
---	SELECT * FROM GAME_OF_JOINS.Movilidad M
+INSERT INTO GAME_OF_JOINS.BI_D_Movilidad
+	SELECT * FROM GAME_OF_JOINS.Movilidad M
 	
---INSERT INTO GAME_OF_JOINS.BI_D_Repartidor (repartidor_dni, repartidor_movilidad, repartidor_rango_etario)
---	SELECT repartidor_dni, repartidor_movilidad,  GAME_OF_JOINS.GetRangoEtario(repartidor_fecha_nacimiento)  FROM GAME_OF_JOINS.Repartidor
+INSERT INTO GAME_OF_JOINS.BI_D_Repartidor (repartidor_dni, repartidor_movilidad, repartidor_rango_etario)
+	SELECT repartidor_dni, repartidor_movilidad,  GAME_OF_JOINS.GetRangoEtario(repartidor_fecha_nacimiento)  FROM GAME_OF_JOINS.Repartidor
 
 INSERT INTO GAME_OF_JOINS.BI_D_TipoMedioDePago
 	SELECT tipo_medio_pago FROM GAME_OF_JOINS.TipoMedioDePago
 
---INSERT INTO GAME_OF_JOINS.BI_D_Usuario
---	SELECT usuario_dni, GAME_OF_JOINS.GetRangoEtario(usuario_fecha_nacimiento) FROM GAME_OF_JOINS.Usuario
+INSERT INTO GAME_OF_JOINS.BI_D_Usuario
+	SELECT usuario_dni, GAME_OF_JOINS.GetRangoEtario(usuario_fecha_nacimiento) FROM GAME_OF_JOINS.Usuario
 
 INSERT INTO GAME_OF_JOINS.BI_D_TipoReclamo(tipo_reclamo) 
 	SELECT tipo_reclamo FROM GAME_OF_JOINS.TipoReclamo
@@ -513,8 +538,8 @@ INSERT INTO GAME_OF_JOINS.BI_D_TipoReclamo(tipo_reclamo)
 INSERT INTO GAME_OF_JOINS.BI_D_Cupon (cupon_nro, cupon_monto, cupon_fecha_alta)
 	SELECT cupon_nro, cupon_monto_descuento, cupon_fecha_alta FROM GAME_OF_JOINS.Cupon
 
---INSERT INTO GAME_OF_JOINS.BI_D_OperadorReclamo (operador_id, operador_dni, operador_nombre, operador_apellido, operador_fecha_nacimiento)
---	SELECT operador_id, operador_dni, operador_nombre, operador_apellido, operador_fecha_nacimiento FROM GAME_OF_JOINS.OperadorReclamo
+INSERT INTO GAME_OF_JOINS.BI_D_OperadorReclamo (operador_id, operador_dni, operador_nombre, operador_apellido, operador_fecha_nacimiento)
+	SELECT operador_id, operador_dni, operador_nombre, operador_apellido, operador_fecha_nacimiento FROM GAME_OF_JOINS.OperadorReclamo
 
 INSERT INTO GAME_OF_JOINS.BI_D_RangoEtarioUsuarios
 	SELECT distinct GAME_OF_JOINS.GetRangoEtario(U.usuario_fecha_nacimiento) FROM GAME_OF_JOINS.Usuario U 
@@ -529,7 +554,7 @@ INSERT INTO GAME_OF_JOINS.BI_H_ServicioMensajeria (servicio_mensajeria_rango_eta
 	SELECT RER.repartidor_rango_etario_id, R.repartidor_movilidad, EE.estado_envio_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, P.paquete_id, AVG(S.servicio_mensajeria_valor_asegurado) AS PROM_VALOR_ASEGURADO, AVG(ABS(S.servicio_mensajeria_tiempo_estimado - DATEDIFF(MINUTE, S.servicio_mensajeria_fecha_solicitud, S.servicio_mensajeria_fecha_finalizacion))) AS DESVIO_PROMEDIO, COUNT(1) AS CANT_SERVICIOS_TOTALES
 	FROM GAME_OF_JOINS.ServicioMensajeria S
 	JOIN GAME_OF_JOINS.Repartidor R ON R.repartidor_dni = S.servicio_mensajeria_repartidor
-	JOIN GAME_OF_JOINS.BI_D_RangoEtarioRepartidores RER ON RER.repartidor_rango_etario = GAME_OF_JOINS.GetRangoEtario(R.repartidor_fecha_nacimiento)
+	JOIN GAME_OF_JOINS.BI_D_RangoEtarioRepartidores RER ON RER.repartidor_rango_etario_id = GAME_OF_JOINS.GetRangoEtario(R.repartidor_fecha_nacimiento)
 	JOIN GAME_OF_JOINS.MedioDePago MP ON S.servicio_mensajeria_medio_pago = MP.medio_pago_id
 	JOIN GAME_OF_JOINS.BI_D_EstadoEnvio EE ON S.servicio_mensajeria_estado_id = EE.estado_envio_id
 	JOIN GAME_OF_JOINS.BI_D_Paquete P ON S.servicio_mensajeria_paquete = P.paquete_id
@@ -564,9 +589,9 @@ INSERT INTO GAME_OF_JOINS.BI_H_Pedido (pedido_usuario_rango_etario, pedido_repar
 	SELECT REU.usuario_rango_etario_id, RER.repartidor_rango_etario_id, R.repartidor_movilidad, L.local_id, EP.estado_pedido_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, SUM(P.pedido_total_cupones) AS TOTAL_CUP, AVG(P.pedido_total_servicio) AS PROM_TOTAL, SUM(P.pedido_total_servicio) AS TOTAL, COUNT(1) AS CANT_PEDIDOS_TOTALES, AVG(P.pedido_calificacion) AS CALIF_PROM, AVG(ABS(P.pedido_tiempo_entrega_estimada - DATEDIFF(MINUTE, P.pedido_fecha_hora, P.pedido_fecha_hora_entrega))) AS DESVIO_PROMEDIO
 	FROM GAME_OF_JOINS.Pedido P
 	JOIN GAME_OF_JOINS.Usuario U ON P.pedido_usuario_dni = U.usuario_dni
-	JOIN GAME_OF_JOINS.BI_D_RangoEtarioUsuarios REU ON REU.usuario_rango_etario = GAME_OF_JOINS.GetRangoEtario(U.usuario_fecha_nacimiento) 
+	JOIN GAME_OF_JOINS.BI_D_RangoEtarioUsuarios REU ON REU.usuario_rango_etario_id = GAME_OF_JOINS.GetRangoEtario(U.usuario_fecha_nacimiento) 
 	JOIN GAME_OF_JOINS.Repartidor R ON P.pedido_repartidor_dni = R.repartidor_dni
-	JOIN GAME_OF_JOINS.BI_D_RangoEtarioRepartidores RER ON RER.repartidor_rango_etario = GAME_OF_JOINS.GetRangoEtario(R.repartidor_fecha_nacimiento) 
+	JOIN GAME_OF_JOINS.BI_D_RangoEtarioRepartidores RER ON RER.repartidor_rango_etario_id = GAME_OF_JOINS.GetRangoEtario(R.repartidor_fecha_nacimiento) 
 	JOIN GAME_OF_JOINS.MedioDePago MP ON P.pedido_medio_pago_id = MP.medio_pago_id
 	JOIN GAME_OF_JOINS.BI_D_EstadoPedido EP ON P.pedido_estado_id = EP.estado_pedido_id
 	INNER JOIN GAME_OF_JOINS.DireccionUsuario DU ON DU.direccion_usuario_id = P.pedido_direccion_usuario_id
@@ -837,8 +862,6 @@ CREATE VIEW GAME_OF_JOINS.BI_DESVIOS_EN_SERVICIOS AS (
 )
 GO
 
-
-
 -- Cantidad de pedidos realizados, agrupados por localidad y tipo de local ordenados segun dia y franja horaria de mayor demanda 
 SELECT * FROM GAME_OF_JOINS.BI_V_MAYOR_CANTIDAD_PEDIDOS 
 
@@ -877,5 +900,3 @@ SELECT * FROM GAME_OF_JOINS.BI_V_PEDIDOS_Y_SERVICIOS_PROMEDIO
 --Este indicador debe tener en cuenta todos los envíos, es decir, sumar tanto los envíos de pedidos como los de mensajería.
 SELECT * FROM GAME_OF_JOINS.BI_DESVIOS_EN_SERVICIOS
 
---  SELECT * FROM GAME_OF_JOINS.BI_V_PEDIDOS_Y_SERVICIOS_TOTALES
---  SELECT * FROM GAME_OF_JOINS.BI_V_PEDIDOS_Y_SERVICIOS_ENTREGADOS
