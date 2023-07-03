@@ -254,36 +254,30 @@ CREATE TABLE GAME_OF_JOINS.BI_D_Paquete(
 );
 
 CREATE TABLE GAME_OF_JOINS.BI_H_ServicioMensajeria (
-	servicio_mensajeria_nro decimal(18,0) not null,
-	servicio_mensajeria_usuario_dni decimal(18,0) not null REFERENCES GAME_OF_JOINS.BI_D_Usuario(usuario_dni),
-	servicio_mensajeria_repartidor_dni decimal(18,0) not null REFERENCES GAME_OF_JOINS.BI_D_Repartidor(repartidor_dni), 
+	servicio_mensajeria_rango_etario_repartidor int not null REFERENCES GAME_OF_JOINS.BI_D_RangoEtarioRepartidores(repartidor_rango_etario_id),
 	servicio_mensajeria_estado_id int not null REFERENCES GAME_OF_JOINS.BI_D_EstadoEnvio(estado_envio_id),
 	servicio_mensajeria_tipo_medio_pago_id int not null REFERENCES GAME_OF_JOINS.BI_D_TipoMedioDePago(tipo_medio_pago_id),
 	servicio_mensajeria_tiempo_id int not null REFERENCES GAME_OF_JOINS.BI_D_Tiempo(tiempo_id),
 	servicio_mensajeria_localidad_id int not null REFERENCES GAME_OF_JOINS.BI_D_Localidad(localidad_id),
 	servicio_mensajeria_dia_semana_id int not null REFERENCES GAME_OF_JOINS.BI_D_Dias(dia_id),
 	servicio_mensajeria_rango_horario_id int not null REFERENCES GAME_OF_JOINS.BI_D_RangoHorario(rango_horario_id),
-	servicio_mensajeria_paquete int REFERENCES GAME_OF_JOINS.BI_D_Paquete(paquete_id),
-	servicio_mensajeria_valor_asegurado decimal(18,2),
-	servicio_mensajeria_total DECIMAL(18,2),
-	servicio_mensajeria_calificacion int,
-	servicio_mensajeria_tiempo_estimado decimal(18,2),
-	servicio_mensajeria_fecha_creacion datetime2(3) not null,
-	servicio_mensajeria_fecha_entrega datetime2(3) not null
+	servicio_mensajeria_paquete int not null REFERENCES GAME_OF_JOINS.BI_D_Paquete(paquete_id),
+	servicio_mensajeria_prom_valor_asegurado decimal(18,2),
+	servicio_mensajeria_prom_desvio decimal(18,2),
+	servicio_mensajeria_total_servicios int
 );
 
 ALTER TABLE GAME_OF_JOINS.BI_H_ServicioMensajeria
 ADD CONSTRAINT PK_BI_H_ServicioMensajeria PRIMARY KEY 
 (
-    servicio_mensajeria_nro,
-    servicio_mensajeria_usuario_dni,
-    servicio_mensajeria_repartidor_dni,
+    servicio_mensajeria_rango_etario_repartidor,
     servicio_mensajeria_estado_id,
     servicio_mensajeria_tipo_medio_pago_id,
     servicio_mensajeria_tiempo_id,
     servicio_mensajeria_localidad_id,
     servicio_mensajeria_dia_semana_id,
-    servicio_mensajeria_rango_horario_id
+    servicio_mensajeria_rango_horario_id,
+	servicio_mensajeria_paquete
 );
 
 CREATE TABLE GAME_OF_JOINS.BI_H_Pedido (
@@ -526,10 +520,12 @@ INSERT INTO GAME_OF_JOINS.BI_D_RangoEtarioOperadores
 
 INSERT INTO GAME_OF_JOINS.BI_D_RangoEtarioRepartidores
 	SELECT distinct GAME_OF_JOINS.GetRangoEtario(R.repartidor_fecha_nacimiento) FROM GAME_OF_JOINS.Repartidor R 
-	/*
-INSERT INTO GAME_OF_JOINS.BI_H_ServicioMensajeria (servicio_mensajeria_nro, servicio_mensajeria_usuario_dni, servicio_mensajeria_repartidor_dni, servicio_mensajeria_estado_id, servicio_mensajeria_tipo_medio_pago_id, servicio_mensajeria_tiempo_id, servicio_mensajeria_localidad_id, servicio_mensajeria_dia_semana_id, servicio_mensajeria_rango_horario_id, servicio_mensajeria_paquete, servicio_mensajeria_valor_asegurado, servicio_mensajeria_total, servicio_mensajeria_calificacion, servicio_mensajeria_tiempo_estimado, servicio_mensajeria_fecha_creacion, servicio_mensajeria_fecha_entrega)
-	SELECT S.servicio_mensajeria_nro, U.usuario_dni, S.servicio_mensajeria_repartidor, EE.estado_envio_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, P.paquete_id, S.servicio_mensajeria_valor_asegurado, S.servicio_mensajeria_total, S.servicio_mensajeria_calificacion, S.servicio_mensajeria_tiempo_estimado, S.servicio_mensajeria_fecha_solicitud, S.servicio_mensajeria_fecha_finalizacion
+
+INSERT INTO GAME_OF_JOINS.BI_H_ServicioMensajeria (servicio_mensajeria_rango_etario_repartidor, servicio_mensajeria_estado_id, servicio_mensajeria_tipo_medio_pago_id, servicio_mensajeria_tiempo_id, servicio_mensajeria_localidad_id, servicio_mensajeria_dia_semana_id, servicio_mensajeria_rango_horario_id, servicio_mensajeria_paquete, servicio_mensajeria_prom_valor_asegurado, servicio_mensajeria_prom_desvio, servicio_mensajeria_total_servicios)
+	SELECT RER.repartidor_rango_etario_id, EE.estado_envio_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, P.paquete_id, AVG(S.servicio_mensajeria_valor_asegurado) AS PROM_VALOR_ASEGURADO, AVG(ABS(S.servicio_mensajeria_tiempo_estimado - DATEDIFF(MINUTE, S.servicio_mensajeria_fecha_solicitud, S.servicio_mensajeria_fecha_finalizacion))) AS DESVIO_PROMEDIO, COUNT(1) AS CANT_SERVICIOS_TOTALES
 	FROM GAME_OF_JOINS.ServicioMensajeria S
+	JOIN GAME_OF_JOINS.Repartidor R ON R.repartidor_dni = S.servicio_mensajeria_repartidor
+	JOIN GAME_OF_JOINS.BI_D_RangoEtarioRepartidores RER ON RER.repartidor_rango_etario = GAME_OF_JOINS.GetRangoEtario(R.repartidor_fecha_nacimiento)
 	JOIN GAME_OF_JOINS.MedioDePago MP ON S.servicio_mensajeria_medio_pago = MP.medio_pago_id
 	JOIN GAME_OF_JOINS.BI_D_EstadoEnvio EE ON S.servicio_mensajeria_estado_id = EE.estado_envio_id
 	JOIN GAME_OF_JOINS.BI_D_Paquete P ON S.servicio_mensajeria_paquete = P.paquete_id
@@ -538,9 +534,10 @@ INSERT INTO GAME_OF_JOINS.BI_H_ServicioMensajeria (servicio_mensajeria_nro, serv
 	INNER JOIN GAME_OF_JOINS.BI_D_Tiempo TI ON TI.anio = DATEPART(YEAR, S.servicio_mensajeria_fecha_solicitud) AND TI.mes = DATEPART(MONTH, S.servicio_mensajeria_fecha_solicitud)
 	INNER JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia = DATENAME(WEEKDAY, S.servicio_mensajeria_fecha_solicitud)
 	INNER JOIN GAME_OF_JOINS.BI_D_RangoHorario RH ON RH.rango_horario = GAME_OF_JOINS.GetRangoHorario(S.servicio_mensajeria_fecha_solicitud)
-	JOIN GAME_OF_JOINS.BI_D_Usuario U ON S.servicio_mensajeria_usuario = U.Usuario_dni
+	GROUP BY RER.repartidor_rango_etario_id, EE.estado_envio_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, P.paquete_id
+
 GO
-*/
+
 
 INSERT INTO GAME_OF_JOINS.BI_H_Reclamo 
 	SELECT TI.tiempo_id, DI.dia_id, RH.rango_horario_id, REO.operador_rango_etario_id, TR.tipo_reclamo_id, L.local_id, AVG(DATEDIFF(MINUTE, R.reclamo_fecha_hora_creacion, R.reclamo_fecha_hora_solucion)) AS PROM_TIEMPO, COUNT(1) AS TOTAL_RECLAMOS, CASE WHEN SUM(C.cupon_monto) IS NULL THEN 0 ELSE SUM(C.cupon_monto) END AS CUPON_MONTO_TOTAL
@@ -671,13 +668,13 @@ CREATE VIEW GAME_OF_JOINS.BI_V_MONTO_PEDIDOS_CANCELADOS AS (
 		GROUP BY P.pedido_dia_semana_id, P.pedido_rango_horario_id, P.pedido_local_id
 )
 GO
-
+--CAMBIO
 CREATE VIEW GAME_OF_JOINS.BI_V_VALOR_ASEGURADO_XPAQUETE AS (
 	SELECT 
 		(SELECT anio FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = S.servicio_mensajeria_tiempo_id) AS ANIO,
 		(SELECT mes FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = S.servicio_mensajeria_tiempo_id) AS MES,
 		(SELECT paquete_tipo FROM GAME_OF_JOINS.BI_D_Paquete WHERE paquete_id = S.servicio_mensajeria_paquete) AS TIPO_PAQUETE,
-		AVG(S.servicio_mensajeria_valor_asegurado) AS VALOR_ASEGURADO_PROMEDIO
+		AVG(S.servicio_mensajeria_prom_desvio) AS VALOR_ASEGURADO_PROMEDIO
 		FROM GAME_OF_JOINS.BI_H_ServicioMensajeria S
 		GROUP BY S.servicio_mensajeria_tiempo_id, S.servicio_mensajeria_paquete
 )
