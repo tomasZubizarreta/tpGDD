@@ -255,6 +255,7 @@ CREATE TABLE GAME_OF_JOINS.BI_D_Paquete(
 
 CREATE TABLE GAME_OF_JOINS.BI_H_ServicioMensajeria (
 	servicio_mensajeria_rango_etario_repartidor int not null REFERENCES GAME_OF_JOINS.BI_D_RangoEtarioRepartidores(repartidor_rango_etario_id),
+	servicio_mensajeria_movilidad_repartidor decimal(18,0) not null REFERENCES GAME_OF_JOINS.BI_D_Movilidad(movilidad_id),
 	servicio_mensajeria_estado_id int not null REFERENCES GAME_OF_JOINS.BI_D_EstadoEnvio(estado_envio_id),
 	servicio_mensajeria_tipo_medio_pago_id int not null REFERENCES GAME_OF_JOINS.BI_D_TipoMedioDePago(tipo_medio_pago_id),
 	servicio_mensajeria_tiempo_id int not null REFERENCES GAME_OF_JOINS.BI_D_Tiempo(tiempo_id),
@@ -271,6 +272,7 @@ ALTER TABLE GAME_OF_JOINS.BI_H_ServicioMensajeria
 ADD CONSTRAINT PK_BI_H_ServicioMensajeria PRIMARY KEY 
 (
     servicio_mensajeria_rango_etario_repartidor,
+	servicio_mensajeria_movilidad_repartidor,
     servicio_mensajeria_estado_id,
     servicio_mensajeria_tipo_medio_pago_id,
     servicio_mensajeria_tiempo_id,
@@ -284,6 +286,7 @@ CREATE TABLE GAME_OF_JOINS.BI_H_Pedido (
 	pedido_usuario_rango_etario int NOT NULL REFERENCES GAME_OF_JOINS.BI_D_RangoEtarioUsuarios,
 	pedido_local_id int not null REFERENCES GAME_OF_JOINS.BI_D_Local(local_id),
 	pedido_repartidor_rango_etario int not null REFERENCES GAME_OF_JOINS.BI_D_RangoEtarioUsuarios, 
+	pedido_movilidad_repartidor decimal(18,0) not null REFERENCES GAME_OF_JOINS.BI_D_Movilidad(movilidad_id),
 	pedido_estado_id int not null REFERENCES GAME_OF_JOINS.BI_D_EstadoPedido(estado_pedido_id),
 	pedido_tipo_medio_pago_id int not null REFERENCES GAME_OF_JOINS.BI_D_TipoMedioDePago(tipo_medio_pago_id),
 	pedido_tiempo_id int not null REFERENCES GAME_OF_JOINS.BI_D_Tiempo(tiempo_id),
@@ -304,6 +307,7 @@ ADD CONSTRAINT PK_BI_H_Pedido PRIMARY KEY
 	pedido_usuario_rango_etario,
 	pedido_local_id,
 	pedido_repartidor_rango_etario,
+	pedido_movilidad_repartidor,
 	pedido_tipo_medio_pago_id,
 	pedido_tiempo_id,
 	pedido_localidad_id,
@@ -521,8 +525,8 @@ INSERT INTO GAME_OF_JOINS.BI_D_RangoEtarioOperadores
 INSERT INTO GAME_OF_JOINS.BI_D_RangoEtarioRepartidores
 	SELECT distinct GAME_OF_JOINS.GetRangoEtario(R.repartidor_fecha_nacimiento) FROM GAME_OF_JOINS.Repartidor R 
 
-INSERT INTO GAME_OF_JOINS.BI_H_ServicioMensajeria (servicio_mensajeria_rango_etario_repartidor, servicio_mensajeria_estado_id, servicio_mensajeria_tipo_medio_pago_id, servicio_mensajeria_tiempo_id, servicio_mensajeria_localidad_id, servicio_mensajeria_dia_semana_id, servicio_mensajeria_rango_horario_id, servicio_mensajeria_paquete, servicio_mensajeria_prom_valor_asegurado, servicio_mensajeria_prom_desvio, servicio_mensajeria_total_servicios)
-	SELECT RER.repartidor_rango_etario_id, EE.estado_envio_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, P.paquete_id, AVG(S.servicio_mensajeria_valor_asegurado) AS PROM_VALOR_ASEGURADO, AVG(ABS(S.servicio_mensajeria_tiempo_estimado - DATEDIFF(MINUTE, S.servicio_mensajeria_fecha_solicitud, S.servicio_mensajeria_fecha_finalizacion))) AS DESVIO_PROMEDIO, COUNT(1) AS CANT_SERVICIOS_TOTALES
+INSERT INTO GAME_OF_JOINS.BI_H_ServicioMensajeria (servicio_mensajeria_rango_etario_repartidor, servicio_mensajeria_movilidad_repartidor, servicio_mensajeria_estado_id, servicio_mensajeria_tipo_medio_pago_id, servicio_mensajeria_tiempo_id, servicio_mensajeria_localidad_id, servicio_mensajeria_dia_semana_id, servicio_mensajeria_rango_horario_id, servicio_mensajeria_paquete, servicio_mensajeria_prom_valor_asegurado, servicio_mensajeria_prom_desvio, servicio_mensajeria_total_servicios)
+	SELECT RER.repartidor_rango_etario_id, R.repartidor_movilidad, EE.estado_envio_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, P.paquete_id, AVG(S.servicio_mensajeria_valor_asegurado) AS PROM_VALOR_ASEGURADO, AVG(ABS(S.servicio_mensajeria_tiempo_estimado - DATEDIFF(MINUTE, S.servicio_mensajeria_fecha_solicitud, S.servicio_mensajeria_fecha_finalizacion))) AS DESVIO_PROMEDIO, COUNT(1) AS CANT_SERVICIOS_TOTALES
 	FROM GAME_OF_JOINS.ServicioMensajeria S
 	JOIN GAME_OF_JOINS.Repartidor R ON R.repartidor_dni = S.servicio_mensajeria_repartidor
 	JOIN GAME_OF_JOINS.BI_D_RangoEtarioRepartidores RER ON RER.repartidor_rango_etario = GAME_OF_JOINS.GetRangoEtario(R.repartidor_fecha_nacimiento)
@@ -534,7 +538,7 @@ INSERT INTO GAME_OF_JOINS.BI_H_ServicioMensajeria (servicio_mensajeria_rango_eta
 	INNER JOIN GAME_OF_JOINS.BI_D_Tiempo TI ON TI.anio = DATEPART(YEAR, S.servicio_mensajeria_fecha_solicitud) AND TI.mes = DATEPART(MONTH, S.servicio_mensajeria_fecha_solicitud)
 	INNER JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia = DATENAME(WEEKDAY, S.servicio_mensajeria_fecha_solicitud)
 	INNER JOIN GAME_OF_JOINS.BI_D_RangoHorario RH ON RH.rango_horario = GAME_OF_JOINS.GetRangoHorario(S.servicio_mensajeria_fecha_solicitud)
-	GROUP BY RER.repartidor_rango_etario_id, EE.estado_envio_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, P.paquete_id
+	GROUP BY RER.repartidor_rango_etario_id, R.repartidor_movilidad, EE.estado_envio_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, P.paquete_id
 
 GO
 
@@ -556,8 +560,8 @@ INSERT INTO GAME_OF_JOINS.BI_H_Reclamo
 GO
 
 
-INSERT INTO GAME_OF_JOINS.BI_H_Pedido (pedido_usuario_rango_etario, pedido_repartidor_rango_etario, pedido_local_id, pedido_estado_id, pedido_tipo_medio_pago_id, pedido_tiempo_id, pedido_localidad_id, pedido_dia_semana_id, pedido_rango_horario_id, pedido_total_cupones, pedido_prom_total, pedido_sum_total, pedido_cantidad, pedido_prom_calificacion, pedido_prom_desvio)
-	SELECT REU.usuario_rango_etario_id, RER.repartidor_rango_etario_id, L.local_id, EP.estado_pedido_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, SUM(P.pedido_total_cupones) AS TOTAL_CUP, AVG(P.pedido_total_servicio) AS PROM_TOTAL, SUM(P.pedido_total_servicio) AS TOTAL, COUNT(1) AS CANT_PEDIDOS_TOTALES, AVG(P.pedido_calificacion) AS CALIF_PROM, AVG(ABS(P.pedido_tiempo_entrega_estimada - DATEDIFF(MINUTE, P.pedido_fecha_hora, P.pedido_fecha_hora_entrega))) AS DESVIO_PROMEDIO
+INSERT INTO GAME_OF_JOINS.BI_H_Pedido (pedido_usuario_rango_etario, pedido_repartidor_rango_etario, pedido_movilidad_repartidor, pedido_local_id, pedido_estado_id, pedido_tipo_medio_pago_id, pedido_tiempo_id, pedido_localidad_id, pedido_dia_semana_id, pedido_rango_horario_id, pedido_total_cupones, pedido_prom_total, pedido_sum_total, pedido_cantidad, pedido_prom_calificacion, pedido_prom_desvio)
+	SELECT REU.usuario_rango_etario_id, RER.repartidor_rango_etario_id, R.repartidor_movilidad, L.local_id, EP.estado_pedido_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, SUM(P.pedido_total_cupones) AS TOTAL_CUP, AVG(P.pedido_total_servicio) AS PROM_TOTAL, SUM(P.pedido_total_servicio) AS TOTAL, COUNT(1) AS CANT_PEDIDOS_TOTALES, AVG(P.pedido_calificacion) AS CALIF_PROM, AVG(ABS(P.pedido_tiempo_entrega_estimada - DATEDIFF(MINUTE, P.pedido_fecha_hora, P.pedido_fecha_hora_entrega))) AS DESVIO_PROMEDIO
 	FROM GAME_OF_JOINS.Pedido P
 	JOIN GAME_OF_JOINS.Usuario U ON P.pedido_usuario_dni = U.usuario_dni
 	JOIN GAME_OF_JOINS.BI_D_RangoEtarioUsuarios REU ON REU.usuario_rango_etario = GAME_OF_JOINS.GetRangoEtario(U.usuario_fecha_nacimiento) 
@@ -572,7 +576,7 @@ INSERT INTO GAME_OF_JOINS.BI_H_Pedido (pedido_usuario_rango_etario, pedido_repar
 	INNER JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia = DATENAME(WEEKDAY, P.pedido_fecha_hora)
 	INNER JOIN GAME_OF_JOINS.BI_D_RangoHorario RH ON RH.rango_horario = GAME_OF_JOINS.GetRangoHorario(P.pedido_fecha_hora)
 	JOIN GAME_OF_JOINS.BI_D_Local L ON P.pedido_local_id = L.local_id
-	GROUP BY REU.usuario_rango_etario_id, L.local_id, RER.repartidor_rango_etario_id, EP.estado_pedido_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id
+	GROUP BY REU.usuario_rango_etario_id, L.local_id, RER.repartidor_rango_etario_id, R.repartidor_movilidad, EP.estado_pedido_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id
 GO
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -685,39 +689,37 @@ CREATE VIEW GAME_OF_JOINS.BI_V_PEDIDOS_Y_SERVICIOS_TOTALES AS (
 		(SELECT anio FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = T.pedido_tiempo_id) AS ANIO,
 		(SELECT mes FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = T.pedido_tiempo_id) AS MES, 
 		l.localidad AS LOCALIDAD,
-		re.rango_etario_id AS RANGO_ETARIO_REPARTIDOR,
+		pedido_repartidor_rango_etario, --cambio
 		SUM(pedidos_entregados) + SUM(servicios_entregados) AS SERVICIOS_TOTALES
 	FROM (
 		SELECT
 			pedido_tiempo_id,
 			pedido_localidad_id,
-			repartidor_rango_etario,
+			pedido_repartidor_rango_etario, -- cambio
 			COUNT(1) AS pedidos_entregados,
 			0 AS servicios_entregados
 		FROM GAME_OF_JOINS.BI_H_Pedido P
-		INNER JOIN GAME_OF_JOINS.BI_D_Repartidor R ON P.pedido_repartidor_dni = R.repartidor_dni
 		INNER JOIN GAME_OF_JOINS.BI_D_EstadoPedido EP ON EP.estado_pedido_id = P.pedido_estado_id
-		GROUP BY pedido_tiempo_id, pedido_localidad_id, repartidor_rango_etario
+		GROUP BY pedido_tiempo_id, pedido_localidad_id, pedido_repartidor_rango_etario
 
 		UNION ALL
 
 		SELECT
 			servicio_mensajeria_tiempo_id,
 			servicio_mensajeria_localidad_id,
-			repartidor_rango_etario,
+			servicio_mensajeria_rango_etario_repartidor, -- cambio
 			0 AS pedidos_entregados,
 			COUNT(1) AS servicios_entregados
 		FROM GAME_OF_JOINS.BI_H_ServicioMensajeria S
-		INNER JOIN GAME_OF_JOINS.BI_D_Repartidor R ON S.servicio_mensajeria_repartidor_dni = R.repartidor_dni
 		INNER JOIN GAME_OF_JOINS.BI_D_EstadoEnvio EE ON S.servicio_mensajeria_estado_id = EE.estado_envio_id
-		GROUP BY servicio_mensajeria_tiempo_id, servicio_mensajeria_localidad_id, repartidor_rango_etario
+		GROUP BY servicio_mensajeria_tiempo_id, servicio_mensajeria_localidad_id, servicio_mensajeria_rango_etario_repartidor -- cambio
 	) AS T
 	INNER JOIN GAME_OF_JOINS.BI_D_Tiempo TI ON T.pedido_tiempo_id = TI.tiempo_id
 	INNER JOIN GAME_OF_JOINS.BI_D_Localidad l ON T.pedido_localidad_id = l.localidad_id
-	INNER JOIN GAME_OF_JOINS.BI_D_RangoEtario re ON T.repartidor_rango_etario = re.rango_etario_id
-	GROUP BY T.pedido_tiempo_id, l.localidad, re.rango_etario_id
+	GROUP BY T.pedido_tiempo_id, l.localidad, pedido_repartidor_rango_etario -- cambio
 )
 GO
+
 
 
 CREATE VIEW GAME_OF_JOINS.BI_V_PEDIDOS_Y_SERVICIOS_ENTREGADOS AS (
@@ -725,46 +727,44 @@ CREATE VIEW GAME_OF_JOINS.BI_V_PEDIDOS_Y_SERVICIOS_ENTREGADOS AS (
 		(SELECT anio FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = T.pedido_tiempo_id) AS ANIO,
 		(SELECT mes FROM GAME_OF_JOINS.BI_D_Tiempo WHERE tiempo_id = T.pedido_tiempo_id) AS MES, 
 		l.localidad AS LOCALIDAD,
-		re.rango_etario_id AS RANGO_ETARIO_REPARTIDOR,
+		pedido_repartidor_rango_etario AS RANGO_ETARIO_REPARTIDOR,
 		SUM(pedidos_entregados) + SUM(servicios_entregados) AS SERVICIOS_CONCRETADOS
 	FROM (
 		SELECT
 			pedido_tiempo_id,
 			pedido_localidad_id,
-			repartidor_rango_etario,
+			pedido_repartidor_rango_etario, --Cambio
 			COUNT(1) AS pedidos_entregados,
 			0 AS servicios_entregados
 		FROM GAME_OF_JOINS.BI_H_Pedido P
-		INNER JOIN GAME_OF_JOINS.BI_D_Repartidor R ON P.pedido_repartidor_dni = R.repartidor_dni
 		INNER JOIN GAME_OF_JOINS.BI_D_EstadoPedido EP ON EP.estado_pedido_id = P.pedido_estado_id
 		WHERE EP.estado = 'Estado Mensajeria Entregado'
-		GROUP BY pedido_tiempo_id, pedido_localidad_id, repartidor_rango_etario
+		GROUP BY pedido_tiempo_id, pedido_localidad_id, pedido_repartidor_rango_etario --cambio
 
 		UNION ALL
 
 		SELECT
 			servicio_mensajeria_tiempo_id,
 			servicio_mensajeria_localidad_id,
-			repartidor_rango_etario,
+			servicio_mensajeria_rango_etario_repartidor,-- cambio
 			0 AS pedidos_entregados,
 			COUNT(1) AS servicios_entregados
 		FROM GAME_OF_JOINS.BI_H_ServicioMensajeria S
-		INNER JOIN GAME_OF_JOINS.BI_D_Repartidor R ON S.servicio_mensajeria_repartidor_dni = R.repartidor_dni
 		INNER JOIN GAME_OF_JOINS.BI_D_EstadoEnvio EE ON S.servicio_mensajeria_estado_id = EE.estado_envio_id
 		WHERE EE.estado = 'Estado Mensajeria Entregado'
-		GROUP BY servicio_mensajeria_tiempo_id, servicio_mensajeria_localidad_id, repartidor_rango_etario
+		GROUP BY servicio_mensajeria_tiempo_id, servicio_mensajeria_localidad_id, servicio_mensajeria_rango_etario_repartidor --cambio 
 	) AS T
 	INNER JOIN GAME_OF_JOINS.BI_D_Tiempo TI ON T.pedido_tiempo_id = TI.tiempo_id
 	INNER JOIN GAME_OF_JOINS.BI_D_Localidad l ON T.pedido_localidad_id = l.localidad_id
-	INNER JOIN GAME_OF_JOINS.BI_D_RangoEtario re ON T.repartidor_rango_etario = re.rango_etario_id
-	GROUP BY T.pedido_tiempo_id, l.localidad, re.rango_etario_id
+	GROUP BY T.pedido_tiempo_id, l.localidad, pedido_repartidor_rango_etario -- cambio
 )
 GO
+
 
 CREATE VIEW GAME_OF_JOINS.BI_V_PEDIDOS_Y_SERVICIOS_PROMEDIO AS (
 	SELECT E.ANIO, E.MES, E.LOCALIDAD, E.RANGO_ETARIO_REPARTIDOR, E.SERVICIOS_CONCRETADOS, T.SERVICIOS_TOTALES, (CAST(E.SERVICIOS_CONCRETADOS AS DECIMAL(4,1)) / CAST(T.SERVICIOS_TOTALES AS DECIMAL(4,1))) * 100 AS PORCENTAJE_SERVICIOS
 	FROM GAME_OF_JOINS.BI_V_PEDIDOS_Y_SERVICIOS_ENTREGADOS E 
-	INNER JOIN GAME_OF_JOINS.BI_V_PEDIDOS_Y_SERVICIOS_TOTALES T ON E.ANIO = T.ANIO AND E.MES = T.MES AND E.LOCALIDAD = T.LOCALIDAD AND E.RANGO_ETARIO_REPARTIDOR = T.RANGO_ETARIO_REPARTIDOR
+	INNER JOIN GAME_OF_JOINS.BI_V_PEDIDOS_Y_SERVICIOS_TOTALES T ON E.ANIO = T.ANIO AND E.MES = T.MES AND E.LOCALIDAD = T.LOCALIDAD AND E.RANGO_ETARIO_REPARTIDOR = T.PEDIDO_REPARTIDOR_RANGO_ETARIO
 )
 GO
 
@@ -807,37 +807,36 @@ CREATE VIEW GAME_OF_JOINS.BI_V_MAYOR_CANTIDAD_PEDIDOS AS
 		row_num = 1
 GO
 
+
 CREATE VIEW GAME_OF_JOINS.BI_DESVIOS_EN_SERVICIOS AS (
-	SELECT DIA_SEMANA, RANGO_HORARIO, movilidad, AVG(DESVIO_PROMEDIO) AS DESVIO_PROMEDIO FROM (
+	SELECT DIA_SEMANA, RANGO_HORARIO, pedido_movilidad_repartidor, AVG(DESVIO_PROMEDIO) AS DESVIO_PROMEDIO FROM (
 		SELECT
 			(SELECT dia FROM GAME_OF_JOINS.BI_D_Dias WHERE dia_id = P.pedido_dia_semana_id) AS DIA_SEMANA,
 			(SELECT rango_horario FROM GAME_OF_JOINS.BI_D_RangoHorario WHERE rango_horario_id = P.pedido_rango_horario_id) AS RANGO_HORARIO,
-			M.movilidad,
-			AVG(ABS(P.pedido_tiempo_estimado - DATEDIFF(MINUTE, P.pedido_fecha_creacion, P.pedido_fecha_entrega))) AS DESVIO_PROMEDIO
+			P.pedido_movilidad_repartidor, -- cambio
+			--M.movilidad,
+			AVG(pedido_prom_desvio) AS DESVIO_PROMEDIO
 		FROM GAME_OF_JOINS.BI_H_Pedido P
-		INNER JOIN GAME_OF_JOINS.BI_D_Repartidor R ON P.pedido_repartidor_dni = R.repartidor_dni
-		INNER JOIN GAME_OF_JOINS.BI_D_Movilidad M ON R.repartidor_movilidad = M.movilidad_id
 		INNER JOIN GAME_OF_JOINS.BI_D_EstadoPedido EP ON EP.estado_pedido_id = P.pedido_estado_id
 		WHERE EP.estado = 'Estado Mensajeria Entregado'
-		GROUP BY pedido_dia_semana_id, pedido_rango_horario_id, M.movilidad_id, M.movilidad
+		GROUP BY pedido_dia_semana_id, pedido_rango_horario_id, pedido_movilidad_repartidor --cambio
 
 		UNION ALL
 
 		SELECT
 			(SELECT dia FROM GAME_OF_JOINS.BI_D_Dias WHERE dia_id = S.servicio_mensajeria_dia_semana_id) AS DIA_SEMANA,
 			(SELECT rango_horario FROM GAME_OF_JOINS.BI_D_RangoHorario WHERE rango_horario_id = S.servicio_mensajeria_rango_horario_id) AS RANGO_HORARIO,
-			M.movilidad,
-			AVG(ABS(S.servicio_mensajeria_tiempo_estimado - DATEDIFF(MINUTE, S.servicio_mensajeria_fecha_creacion, S.servicio_mensajeria_fecha_entrega))) AS DESVIO_PROMEDIO
+			S.servicio_mensajeria_movilidad_repartidor,
+			AVG(servicio_mensajeria_prom_desvio) AS DESVIO_PROMEDIO
 		FROM GAME_OF_JOINS.BI_H_ServicioMensajeria S
-		INNER JOIN GAME_OF_JOINS.BI_D_Repartidor R ON S.servicio_mensajeria_repartidor_dni = R.repartidor_dni
-		INNER JOIN GAME_OF_JOINS.BI_D_Movilidad M ON R.repartidor_movilidad = M.movilidad_id
 		INNER JOIN GAME_OF_JOINS.BI_D_EstadoEnvio EE ON S.servicio_mensajeria_estado_id = EE.estado_envio_id
 		WHERE EE.estado = 'Estado Mensajeria Entregado'
-		GROUP BY servicio_mensajeria_dia_semana_id, servicio_mensajeria_rango_horario_id, M.movilidad
+		GROUP BY servicio_mensajeria_dia_semana_id, servicio_mensajeria_rango_horario_id, S.servicio_mensajeria_movilidad_repartidor--M.movilidad
 	) AS T
-	GROUP BY DIA_SEMANA, RANGO_HORARIO, movilidad
+	GROUP BY DIA_SEMANA, RANGO_HORARIO, pedido_movilidad_repartidor
 )
 GO
+
 
 
 -- Cantidad de pedidos realizados, agrupados por localidad y tipo de local ordenados segun dia y franja horaria de mayor demanda 
@@ -878,3 +877,5 @@ SELECT * FROM GAME_OF_JOINS.BI_V_PEDIDOS_Y_SERVICIOS_PROMEDIO
 --Este indicador debe tener en cuenta todos los envíos, es decir, sumar tanto los envíos de pedidos como los de mensajería.
 SELECT * FROM GAME_OF_JOINS.BI_DESVIOS_EN_SERVICIOS
 
+--  SELECT * FROM GAME_OF_JOINS.BI_V_PEDIDOS_Y_SERVICIOS_TOTALES
+--  SELECT * FROM GAME_OF_JOINS.BI_V_PEDIDOS_Y_SERVICIOS_ENTREGADOS
