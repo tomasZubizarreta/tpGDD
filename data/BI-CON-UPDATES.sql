@@ -75,6 +75,9 @@ IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Categoria')
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_TipoLocal')
     DROP TABLE GAME_OF_JOINS.BI_D_TipoLocal;
 
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Categoria')
+    DROP TABLE GAME_OF_JOINS.BI_D_Categoria;	
+
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BI_D_Cupon')
     DROP TABLE GAME_OF_JOINS.BI_D_Cupon;
 

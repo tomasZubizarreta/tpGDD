@@ -1,5 +1,3 @@
---SELECT COUNT(*) FROM gd_esquema.Maestra
-
 USE GD1C2023
 GO
 
