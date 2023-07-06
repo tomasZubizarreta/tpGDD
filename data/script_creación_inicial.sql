@@ -117,6 +117,8 @@ IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_reclamo' AND schema
     DROP PROCEDURE GAME_OF_JOINS.migrar_reclamo;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_cupon_reclamo' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
     DROP PROCEDURE GAME_OF_JOINS.migrar_cupon_reclamo;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_cupon_pedido' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
+    DROP PROCEDURE GAME_OF_JOINS.migrar_cupon_pedido;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_local' AND schema_id = SCHEMA_ID('GAME_OF_JOINS'))
     DROP PROCEDURE GAME_OF_JOINS.migrar_local;
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'migrar_direccion_local' AND schema_id = SCHEMA_ID('GAME_OF_JOINS')) --LISTO
@@ -651,6 +653,21 @@ CREATE PROCEDURE GAME_OF_JOINS.migrar_reclamo
   END
  GO
 
+ CREATE PROCEDURE GAME_OF_JOINS.migrar_cupon_pedido
+ AS
+  BEGIN
+	INSERT INTO GAME_OF_JOINS.CuponPedido
+	(cupon_pedido_id, cupon_pedido_pedido)
+	SELECT C.cupon_nro, P.pedido_nro
+	FROM [GD1C2023].[gd_esquema].[Maestra] M
+	INNER JOIN GAME_OF_JOINS.Cupon C
+	ON M.CUPON_NRO = C.cupon_nro
+	INNER JOIN GAME_OF_JOINS.Pedido P
+	ON M.PEDIDO_NRO = P.pedido_nro 
+	WHERE M.CUPON_NRO IS NOT NULL AND M.PEDIDO_NRO IS NOT NULL
+  END
+ GO
+
 CREATE PROCEDURE GAME_OF_JOINS.migrar_cupon_reclamo
  AS
   BEGIN
@@ -874,6 +891,7 @@ EXEC GAME_OF_JOINS.migrar_operador_reclamo
 EXEC GAME_OF_JOINS.migrar_producto_local
 EXEC GAME_OF_JOINS.migrar_repartidor
 EXEC GAME_OF_JOINS.migrar_pedido
+EXEC GAME_OF_JOINS.migrar_cupon_pedido
 EXEC GAME_OF_JOINS.migrar_pedidoxproducto
 EXEC GAME_OF_JOINS.migrar_reclamo 
 EXEC GAME_OF_JOINS.migrar_cupon_reclamo
