@@ -145,7 +145,7 @@ CREATE TABLE GAME_OF_JOINS.BI_D_Tiempo (
 
 CREATE TABLE GAME_OF_JOINS.BI_D_Dias (
 	dia_id int IDENTITY(1,1) PRIMARY KEY,
-	dia nvarchar(20) not null 
+	dia int not null 
 );
 
 CREATE TABLE GAME_OF_JOINS.BI_D_RangoHorario (
@@ -417,19 +417,15 @@ SELECT DISTINCT DATEPART(YEAR, S.servicio_mensajeria_fecha_solicitud) AS YEAR, D
 ORDER BY YEAR,MONTH 
 
 INSERT INTO GAME_OF_JOINS.BI_D_Dias
-	select TOP 1 'Monday' from sys.tables
-	UNION
-	select TOP 1 'Tuesday' from sys.tables
-	UNION
-	select TOP 1 'Wednesday' from sys.tables
-	UNION
-	select TOP 1 'Thursday' from sys.tables
-	UNION
-	select TOP 1 'Friday' from sys.tables
-	UNION
-	select TOP 1 'Saturday' from sys.tables
-	UNION
-	select TOP 1 'Sunday' from sys.tables;
+VALUES
+	('1'), --DOMINGO
+    ('2'), --LUNES
+    ('3'), --MARTES 
+    ('4'), --MIERCOLES
+    ('5'), --JUEVES
+	('6'), --VIERNES
+	('7'); --SABADO
+	
 	
 INSERT INTO GAME_OF_JOINS.BI_D_Categoria
 	select categoria from GAME_OF_JOINS.Categoria
@@ -514,7 +510,7 @@ INSERT INTO GAME_OF_JOINS.BI_H_ServicioMensajeria (servicio_mensajeria_rango_eta
 	INNER JOIN GAME_OF_JOINS.BI_D_Localidad LO ON LO.localidad_id = S.servicio_mensajeria_localidad
 	INNER JOIN GAME_OF_JOINS.BI_D_TipoMedioDePago TMP ON TMP.tipo_medio_pago_id = MP.tipo_medio_pago_id
 	INNER JOIN GAME_OF_JOINS.BI_D_Tiempo TI ON TI.anio = DATEPART(YEAR, S.servicio_mensajeria_fecha_solicitud) AND TI.mes = DATEPART(MONTH, S.servicio_mensajeria_fecha_solicitud)
-	INNER JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia = DATENAME(WEEKDAY, S.servicio_mensajeria_fecha_solicitud)
+	INNER JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia = DATEPART(WEEKDAY, S.servicio_mensajeria_fecha_solicitud)
 	INNER JOIN GAME_OF_JOINS.BI_D_RangoHorario RH ON RH.rango_horario = GAME_OF_JOINS.GetRangoHorario(S.servicio_mensajeria_fecha_solicitud)
 	GROUP BY RER.repartidor_rango_etario_id, M.movilidad_id, EE.estado_envio_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id, P.paquete_id
 GO
@@ -526,7 +522,7 @@ INSERT INTO GAME_OF_JOINS.BI_H_Reclamo
 	JOIN GAME_OF_JOINS.BI_D_RangoEtarioOperadores REO ON REO.operador_rango_etario = GAME_OF_JOINS.GetRangoEtario(OP.operador_fecha_nacimiento) 
 	JOIN GAME_OF_JOINS.BI_D_TipoReclamo TR ON TR.tipo_reclamo_id = R.reclamo_tipo
 	JOIN GAME_OF_JOINS.BI_D_Tiempo TI ON TI.anio = DATEPART(YEAR, R.reclamo_fecha_hora_creacion) AND TI.mes = DATEPART(MONTH, R.reclamo_fecha_hora_creacion)
-	JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia = DATENAME(WEEKDAY, R.reclamo_fecha_hora_creacion)
+	JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia = DATEPART(WEEKDAY, R.reclamo_fecha_hora_creacion)
 	JOIN GAME_OF_JOINS.BI_D_RangoHorario RH ON RH.rango_horario = GAME_OF_JOINS.GetRangoHorario(R.reclamo_fecha_hora_creacion)
 	LEFT JOIN GAME_OF_JOINS.CuponReclamo CR ON CR.reclamo_nro = R.reclamo_nro
 	LEFT JOIN GAME_OF_JOINS.BI_D_Cupon C ON C.cupon_nro = CR.cupon_nro
@@ -550,7 +546,7 @@ INSERT INTO GAME_OF_JOINS.BI_H_Pedido (pedido_usuario_rango_etario, pedido_repar
 	INNER JOIN GAME_OF_JOINS.BI_D_Localidad LO ON LO.localidad_id = DU.direccion_usuario_localidad
 	INNER JOIN GAME_OF_JOINS.BI_D_TipoMedioDePago TMP ON TMP.tipo_medio_pago_id = MP.tipo_medio_pago_id
 	INNER JOIN GAME_OF_JOINS.BI_D_Tiempo TI ON TI.anio = DATEPART(YEAR, P.pedido_fecha_hora) AND TI.mes = DATEPART(MONTH, P.pedido_fecha_hora)
-	INNER JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia = DATENAME(WEEKDAY, P.pedido_fecha_hora)
+	INNER JOIN GAME_OF_JOINS.BI_D_Dias DI ON DI.dia =  DATEPART(WEEKDAY, P.pedido_fecha_hora)
 	INNER JOIN GAME_OF_JOINS.BI_D_RangoHorario RH ON RH.rango_horario = GAME_OF_JOINS.GetRangoHorario(P.pedido_fecha_hora)
 	JOIN GAME_OF_JOINS.BI_D_Local L ON P.pedido_local_id = L.local_id
 	GROUP BY REU.usuario_rango_etario_id, L.local_id, RER.repartidor_rango_etario_id, M.movilidad_id, EP.estado_pedido_id, TMP.tipo_medio_pago_id, TI.tiempo_id, LO.localidad_id, DI.dia_id, RH.rango_horario_id
